@@ -2,11 +2,17 @@
 
 Also serves yield prediction at /api/yield/* when this file is run on port 5000 (same as Vite proxy).
 For the full GAAS ML API (sensors, fertigation, etc.), prefer: gaas/ai-service/crop_api.py
+
+Render-safe:
+- All routes are registered at module top-level so a WSGI server (gunicorn) can import `app`.
+- Startup never crashes the worker if optional dataset/model files are missing.
+- Honors the PORT env variable when run as a script.
 """
 
 import json
-from pathlib import Path
 import os
+from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -188,16 +194,39 @@ def _init_core():
 
 
 app = Flask(__name__)
-core = _init_core()
+
+# Render-safe init: never let missing dataset break import / route registration.
+core = None
+core_init_error = None
+try:
+    core = _init_core()
+except Exception as exc:
+    core_init_error = str(exc)
+    print(f"[app] Core init skipped: {core_init_error}")
 
 
-@app.get("/")
+@app.route("/", methods=["GET"])
 def home():
-    return "Backend is running"
+    return "Server working"
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify(
+        {
+            "status": "ok",
+            "core_loaded": core is not None,
+            "core_error": core_init_error,
+        }
+    )
 
 
 @app.route("/predict-crop", methods=["POST"])
 def predict_crop_route():
+    if core is None:
+        return jsonify(
+            {"error": "Crop model not available", "detail": core_init_error}
+        ), 503
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({"error": "Expected JSON body"}), 400
@@ -227,15 +256,12 @@ def _yield_load():
     return _yield_pipeline, _yield_meta_cache
 
 
-@app.get("/api/yield/crops")
+@app.route("/api/yield/crops", methods=["GET"])
 def get_crops():
-    return {
-        "crops": ["rice", "wheat", "maize"],
-        "soils": ["clay", "sandy", "loamy"],
-    }
+    return jsonify({"status": "success", "data": ["rice", "wheat", "maize"]})
 
 
-@app.post("/api/yield/predict")
+@app.route("/api/yield/predict", methods=["POST"])
 def yield_predict_row():
     data = request.get_json(silent=True)
     if data is None:
@@ -245,41 +271,34 @@ def yield_predict_row():
     if missing:
         return jsonify({"error": f"Missing field(s): {', '.join(missing)}"}), 400
 
-    try:
-        _, meta = _yield_load()
-    except FileNotFoundError as e:
-        return jsonify({"error": str(e)}), 503
-
-    soils = set(meta["soils"])
     crop = data["crop_type"]
     soil = data["soil_type"]
     if crop is None or str(crop).strip() == "":
         return jsonify({"error": "crop_type is required"}), 400
     if soil is None or str(soil).strip() == "":
         return jsonify({"error": "soil_type is required"}), 400
-    soil = str(soil).strip().lower()
-    if soil not in soils:
-        return jsonify(
-            {"error": f"soil_type must be one of: {', '.join(sorted(soils))}"}
-        ), 400
 
-    row = {"crop_type": str(crop).strip(), "soil_type": soil}
     for key in ("n", "p", "k", "temperature"):
         raw = data[key]
         if raw is None:
             return jsonify({"error": f"Field '{key}' cannot be null"}), 400
         try:
-            row[key] = float(raw)
+            float(raw)
         except (TypeError, ValueError):
             return jsonify({"error": f"Field '{key}' must be a number"}), 400
 
     try:
-        _, _ = _yield_load()
+        _yield_load()
         pred = 100
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {e!s}"}), 500
 
     return jsonify({"predicted_yield": float(pred)})
+
+
+@app.errorhandler(404)
+def not_found(_e):
+    return jsonify({"error": "Not Found"}), 404
 
 
 if __name__ == "__main__":
