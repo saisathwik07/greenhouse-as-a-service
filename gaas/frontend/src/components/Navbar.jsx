@@ -17,7 +17,10 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
   const navigate = useNavigate();
 
   const handleGoogleSuccess = async (credentialResponse) => {
-    await loginWithGoogle(credentialResponse);
+    const result = await loginWithGoogle(credentialResponse);
+    if (result?.user && !result?.error) {
+      navigate("/", { replace: true });
+    }
   };
 
   return (

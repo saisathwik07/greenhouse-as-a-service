@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 /**
@@ -7,6 +8,7 @@ import { useAuth } from "../hooks/useAuth";
  */
 export default function LoginPage({ mode: controlledMode, onModeChange } = {}) {
   const { login, signup, continueAsGuest } = useAuth();
+  const navigate = useNavigate();
   const [internalMode, setInternalMode] = useState("login");
   const isControlled =
     controlledMode !== undefined && typeof onModeChange === "function";
@@ -32,10 +34,18 @@ export default function LoginPage({ mode: controlledMode, onModeChange } = {}) {
 
     if (mode === "signup") {
       const result = await signup(email, password, displayName);
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      navigate("/", { replace: true });
     } else {
       const result = await login(email, password);
-      if (result.error) setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      navigate("/", { replace: true });
     }
   };
 
@@ -149,7 +159,10 @@ export default function LoginPage({ mode: controlledMode, onModeChange } = {}) {
 
           <button
             type="button"
-            onClick={continueAsGuest}
+            onClick={() => {
+              continueAsGuest();
+              navigate("/", { replace: true });
+            }}
             className="btn-secondary w-full py-2.5 text-sm"
           >
             Continue as Guest

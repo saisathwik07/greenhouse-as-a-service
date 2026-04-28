@@ -180,12 +180,15 @@ export function AuthProvider({ children }) {
     user?.plan === "pro" || user?.plan === "premium" || isAdminUser(user);
   const isAdmin = user?.role === "admin" || isAdminUser(user);
   const isGuest = user?.role === "guest";
+  /** True for any signed-in user (including guest). */
+  const isAuthenticated = Boolean(user);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        isAuthenticated,
         isPro,
         isAdmin,
         isGuest,

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_URL, API_BASE_URL } from "./config";
 
 /** Canonical key for app JWT (backend Bearer token). */
 export const AUTH_TOKEN_KEY = "token";
@@ -135,27 +136,20 @@ export async function ensureAppJwtFromGoogleIdToken() {
   }
 }
 
-function resolveApiBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl != null && String(envUrl).trim() !== "") {
-    return String(envUrl).trim();
-  }
-  const env = import.meta.env.VITE_API_BASE_URL;
-  if (env != null && String(env).trim() !== "") {
-    return String(env).trim();
-  }
-  if (import.meta.env.DEV) {
-    return "/api";
-  }
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    return "/api";
-  }
-  return "http://127.0.0.1:5000/api";
-}
-
+/**
+ * Single source of truth for axios baseURL. `API_URL` always ends with /api
+ * so existing call sites like `api.get("/sensors/realtime")` keep working in
+ * both dev (Vite proxy → /api) and production (Render → https://…/api).
+ */
 export const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
+  baseURL: API_URL,
 });
+
+if (typeof window !== "undefined" && import.meta.env.DEV) {
+  console.info(
+    `[api] axios baseURL=${API_URL} (origin=${API_BASE_URL || "(relative)"})`
+  );
+}
 
 /**
  * Before each request: if no app JWT but a Google ID token exists, mint JWT first.
@@ -186,6 +180,15 @@ api.interceptors.response.use(
       url.includes("/auth/google-login") ||
       url.includes("/auth/login") ||
       url.includes("/auth/register");
+
+    if (!error.response) {
+      const reason = error.code || error.message || "network error";
+      console.error(
+        `[api] Network error calling ${url} via baseURL=${API_URL}: ${reason}`
+      );
+    } else if (status >= 500) {
+      console.error(`[api] Server error ${status} on ${url}`);
+    }
 
     if (status === 401 && !isAuthRoute && getAuthToken()) {
       console.warn("[api] 401 — clearing session and redirecting to login");
