@@ -191,6 +191,11 @@ app = Flask(__name__)
 core = _init_core()
 
 
+@app.get("/")
+def home():
+    return "Backend running"
+
+
 @app.route("/predict-crop", methods=["POST"])
 def predict_crop_route():
     data = request.get_json(silent=True)
