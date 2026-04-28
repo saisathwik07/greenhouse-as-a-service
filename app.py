@@ -193,7 +193,7 @@ core = _init_core()
 
 @app.get("/")
 def home():
-    return "Backend running"
+    return "Backend is running"
 
 
 @app.route("/predict-crop", methods=["POST"])
@@ -228,14 +228,11 @@ def _yield_load():
 
 
 @app.get("/api/yield/crops")
-def yield_list_crops():
-    try:
-        _, meta = _yield_load()
-    except FileNotFoundError as e:
-        return jsonify({"error": str(e)}), 503
-    crops = ["rice", "wheat", "maize"]
-    soils = ["clay", "sandy", "loamy"]
-    return jsonify({"crops": crops, "soils": soils})
+def get_crops():
+    return {
+        "crops": ["rice", "wheat", "maize"],
+        "soils": ["clay", "sandy", "loamy"],
+    }
 
 
 @app.post("/api/yield/predict")
