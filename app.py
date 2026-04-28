@@ -222,7 +222,6 @@ def _yield_load():
     return _yield_pipeline, _yield_meta_cache
 
 
-@app.get("/crops")
 @app.get("/api/yield/crops")
 def yield_list_crops():
     try:
@@ -234,7 +233,6 @@ def yield_list_crops():
     return jsonify({"crops": crops, "soils": soils})
 
 
-@app.post("/predict")
 @app.post("/api/yield/predict")
 def yield_predict_row():
     data = request.get_json(silent=True)
