@@ -1,0 +1,56 @@
+const mongoose = require("mongoose");
+
+const paymentEntrySchema = new mongoose.Schema(
+  {
+    razorpay_payment_id: { type: String, required: true, trim: true },
+    amount: { type: Number, required: true, min: 0 },
+    plan: { type: String, required: true, enum: ["free", "basic", "pro"] },
+    date: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    password: { type: String, default: "" },
+    picture: { type: String, default: "" },
+    createdAt: { type: Date, default: Date.now },
+    lastLoginAt: { type: Date },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    /** SaaS plan: free | basic | pro */
+    plan: {
+      type: String,
+      enum: ["free", "basic", "pro", "none", "standard", "premium"],
+      default: "basic",
+    },
+    planStartDate: { type: Date, default: null },
+    planEndDate: { type: Date, default: null },
+    /** Legacy fields — kept in sync where possible */
+    planActivatedAt: { type: Date },
+    planExpiresAt: { type: Date },
+    payments: { type: [paymentEntrySchema], default: [] },
+    walletBalance: { type: Number, default: 0, min: 0 },
+  },
+  { timestamps: false }
+);
+
+/** Normalize legacy plan values to free | basic | pro */
+userSchema.pre("save", function normalizePlan() {
+  const legacy = {
+    none: "free",
+    standard: "pro",
+    premium: "pro",
+  };
+  if (legacy[this.plan]) this.plan = legacy[this.plan];
+});
+
+module.exports = mongoose.models.User || mongoose.model("User", userSchema);

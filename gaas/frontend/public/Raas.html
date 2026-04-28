@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Research as a Service (RaaS)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0a1120; color: #e6eef8; font-family: Inter, sans-serif; }
+    .tab-active { border-bottom: 2px solid #22d3ee; color: #22d3ee; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-7xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold mb-2">🔬 Research as a Service (RaaS)</h1>
+      <p class="text-slate-400">Click below to access research datasets and queries</p>
+    </header>
+
+    <!-- Main Tabs -->
+    <div class="flex space-x-6 border-b border-slate-600 mb-6">
+      <button class="main-tab tab-active" data-tab="raas">Research as a Service</button>
+    </div>
+
+    <!-- RaaS Content (hidden until clicked) -->
+    <div id="tab-raas" class="tab-content hidden">
+      <!-- Sub-tabs -->
+      <div class="flex space-x-4 border-b border-slate-600 mb-4">
+        <button class="sub-tab tab-active" data-subtab="datasets">Experimental Datasets</button>
+        <button class="sub-tab" data-subtab="queries">Custom Queries</button>
+      </div>
+
+      <!-- Experimental Datasets -->
+      <div id="subtab-datasets" class="subtab-content">
+        <h2 class="text-xl font-semibold mb-4">📂 Experimental Datasets</h2>
+
+        <!-- Search Filters -->
+        <div class="card mb-4">
+          <h3 class="font-bold mb-2">Search Filters</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <input type="text" placeholder="Crop Type" class="p-2 bg-slate-800 rounded" />
+            <input type="text" placeholder="Treatments" class="p-2 bg-slate-800 rounded" />
+            <input type="text" placeholder="Location" class="p-2 bg-slate-800 rounded" />
+            <input type="text" placeholder="Conditions" class="p-2 bg-slate-800 rounded" />
+            <input type="date" class="p-2 bg-slate-800 rounded" />
+          </div>
+          <button class="mt-3 px-3 py-2 bg-emerald-400 text-slate-900 rounded">Search</button>
+        </div>
+
+        <!-- Date Picker for All Sensors -->
+        <div class="card mb-4">
+          <h3 class="font-bold mb-2">Select Date Range</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm mb-1">Start Date</label>
+              <input type="date" id="expStart" class="p-2 bg-slate-800 rounded w-full" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">End Date</label>
+              <input type="date" id="expEnd" class="p-2 bg-slate-800 rounded w-full" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Download Options -->
+        <div class="card mb-4">
+          <h3 class="font-bold mb-2">Download All Sensors Data</h3>
+          <div class="flex gap-2">
+            <button class="px-3 py-2 bg-emerald-400 text-slate-900 rounded">CSV</button>
+            <button class="px-3 py-2 bg-emerald-400 text-slate-900 rounded">JSON</button>
+            <button class="px-3 py-2 bg-emerald-400 text-slate-900 rounded">Excel</button>
+          </div>
+        </div>
+
+        <!-- Data Preview -->
+        <div class="card">
+          <h3 class="font-bold mb-2">Data Preview</h3>
+          <canvas id="datasetPreviewChart" class="w-full h-64"></canvas>
+          <p class="text-slate-400 text-sm mt-2">Quick visualization: summary statistics, sensor trends</p>
+        </div>
+      </div>
+
+      <!-- Custom Queries -->
+      <div id="subtab-queries" class="subtab-content hidden">
+        <h2 class="text-xl font-semibold mb-4">🔎 Custom Queries</h2>
+        <div class="grid gap-4">
+          <div class="card">
+            <h3 class="font-bold mb-2">Filter by Parameters</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" placeholder="Experiment ID" class="p-2 bg-slate-800 rounded" />
+              <input type="date" class="p-2 bg-slate-800 rounded" />
+              <select class="p-2 bg-slate-800 rounded"><option>Crop Type</option></select>
+              <select class="p-2 bg-slate-800 rounded"><option>Sensor Type</option></select>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="font-bold mb-2">Advanced Search</h3>
+            <input type="text" placeholder="e.g., soil pH < 6" class="w-full p-2 bg-slate-800 rounded mb-2" />
+            <button class="px-3 py-2 bg-emerald-400 text-slate-900 rounded">Run Query</button>
+          </div>
+
+          <div class="card">
+            <h3 class="font-bold mb-2">Cross-Experiment Comparison</h3>
+            <canvas id="comparisonChart" class="w-full h-64"></canvas>
+            <p class="text-slate-400 text-sm mt-2">Plot multiple experiments together for analysis</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- Main tab switching ---
+const mainTabs = document.querySelectorAll('.main-tab');
+mainTabs.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    mainTabs.forEach(b=>b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// --- Sub-tab switching ---
+const subTabs = document.querySelectorAll('.sub-tab');
+const subContents = document.querySelectorAll('.subtab-content');
+subTabs.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    subTabs.forEach(b=>b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    subContents.forEach(sc=>sc.classList.add('hidden'));
+    document.getElementById('subtab-'+btn.dataset.subtab).classList.remove('hidden');
+  });
+});
+
+// --- Demo charts ---
+const ctx1 = document.getElementById('datasetPreviewChart');
+if (ctx1) {
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ['Soil pH','Moisture','EC','Temp','Humidity'],
+      datasets: [{ label:'Avg Values', data:[6.5,40,2.1,25,70], backgroundColor:'rgba(59,130,246,0.7)' }]
+    }
+  });
+}
+
+const ctx2 = document.getElementById('comparisonChart');
+if (ctx2) {
+  new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: ['Day 1','Day 2','Day 3','Day 4'],
+      datasets: [
+        {label:'Exp A', data:[6.2,6.4,6.5,6.7], borderColor:'rgba(34,197,94,1)', fill:false},
+        {label:'Exp B', data:[5.8,6.1,6.3,6.2], borderColor:'rgba(239,68,68,1)', fill:false}
+      ]
+    }
+  });
+}
+</script>
+</body>
+</html>

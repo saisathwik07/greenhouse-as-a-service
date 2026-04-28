@@ -1,0 +1,27 @@
+{
+  "crops": [
+    "Cassava",
+    "Maize",
+    "Plantains and others",
+    "Potatoes",
+    "Rice, paddy",
+    "Sorghum",
+    "Soybeans",
+    "Sweet potatoes",
+    "Wheat",
+    "Yams"
+  ],
+  "soils": [
+    "clay",
+    "sandy",
+    "loamy"
+  ],
+  "feature_order": [
+    "crop_type",
+    "soil_type",
+    "n",
+    "p",
+    "k",
+    "temperature"
+  ]
+}

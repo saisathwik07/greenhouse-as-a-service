@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Crop Recommendation as a Service</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/a2d9d6e76b.js" crossorigin="anonymous"></script>
+  <style>
+    .score-bar { background: #e5e7eb; height: 8px; border-radius: 4px; }
+    .score-fill { background: #10b981; height: 8px; border-radius: 4px; }
+    .tab-active { border-bottom: 2px solid #10b981; color: #10b981; }
+  </style>
+</head>
+<body class="bg-white text-gray-900 p-6">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold">🌱 Greenhouse Services</h1>
+    </header>
+
+    <!-- Main Tabs -->
+    <div class="flex space-x-6 border-b border-gray-300 mb-6">
+      <button class="main-tab tab-active pb-2" data-tab="crop">Crop Recommendation as a Service</button>
+    </div>
+
+    <!-- Crop Recommendation Content -->
+    <div id="tab-crop" class="tab-content">
+      <h2 class="text-xl font-semibold flex items-center gap-2 mb-6">
+        <i class="fas fa-seedling text-green-600"></i> Crop Recommendation Service
+      </h2>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Input Form -->
+        <div class="bg-gray-100 p-4 rounded-xl shadow">
+          <h3 class="text-lg font-semibold flex items-center gap-2 mb-4 text-green-700">
+            <i class="fas fa-search"></i> Input Parameters
+          </h3>
+          <form id="cropForm" class="space-y-3">
+            <select id="soilType" required class="w-full p-2 rounded border border-gray-300">
+              <option value="">Select Soil Type</option>
+              <option>Clay</option>
+              <option>Sandy</option>
+              <option>Loamy</option>
+              <option>Black</option>
+              <option>Red</option>
+              <option>Alluvial</option>
+              <option>Laterite</option>
+            </select>
+            <input id="soilMoisture" type="number" placeholder="Soil Moisture (%)" class="w-full p-2 rounded border border-gray-300" required>
+            <input id="soilEC" type="number" step="0.1" placeholder="Soil EC (dS/m)" class="w-full p-2 rounded border border-gray-300" required>
+            <input id="soilPh" type="number" step="0.1" placeholder="Soil pH" class="w-full p-2 rounded border border-gray-300" required>
+            <input id="temperature" type="number" placeholder="Greenhouse Temperature (°C)" class="w-full p-2 rounded border border-gray-300" required>
+            <input id="humidity" type="number" placeholder="Greenhouse Humidity (%)" class="w-full p-2 rounded border border-gray-300" required>
+
+            <div class="flex gap-3">
+              <button type="submit" class="flex-1 bg-green-600 text-white p-2 rounded hover:bg-green-700">Get Recommendations</button>
+              <button type="button" id="resetBtn" class="flex-1 bg-gray-500 text-white p-2 rounded hover:bg-gray-600">Reset</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Results -->
+        <div class="bg-gray-100 p-4 rounded-xl shadow">
+          <h3 class="text-lg font-semibold flex items-center gap-2 mb-4 text-green-700">
+            <i class="fas fa-leaf"></i> Recommended Crops
+          </h3>
+          <div id="results" class="text-gray-600 flex flex-col items-center">
+            <p>Enter soil & climate parameters to see recommendations</p>
+            <i class="fas fa-flask text-3xl mt-2 text-green-500"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const crops = [
+  { name: 'Rice', soilTypes: ['Alluvial', 'Clay'], tempRange: [22, 32], humidityRange: [70, 100], phRange: [5.5, 6.5], moistureRange: [60, 80], ecRange: [1, 2] },
+  { name: 'Wheat', soilTypes: ['Loamy', 'Clay'], tempRange: [15, 25], humidityRange: [50, 70], phRange: [6.0, 7.5], moistureRange: [40, 60], ecRange: [1, 1.5] },
+  { name: 'Maize', soilTypes: ['Loamy', 'Sandy'], tempRange: [18, 30], humidityRange: [50, 80], phRange: [5.5, 7.5], moistureRange: [50, 70], ecRange: [1, 2] },
+  { name: 'Cotton', soilTypes: ['Black', 'Alluvial'], tempRange: [20, 35], humidityRange: [60, 80], phRange: [5.5, 8.0], moistureRange: [40, 60], ecRange: [1, 2] },
+  { name: 'Tomato', soilTypes: ['Loamy', 'Sandy'], tempRange: [20, 30], humidityRange: [60, 80], phRange: [5.5, 7.0], moistureRange: [50, 70], ecRange: [1, 2] },
+];
+
+function calculateCropScores(params) {
+  const { soilType, soilMoisture, soilEC, soilPh, temperature, humidity } = params;
+  const sm = parseFloat(soilMoisture), ec = parseFloat(soilEC), ph = parseFloat(soilPh), t = parseFloat(temperature), h = parseFloat(humidity);
+
+  return crops.map(crop => {
+    let score = 0;
+    if (crop.soilTypes.includes(soilType)) score += 20;
+    if (t >= crop.tempRange[0] && t <= crop.tempRange[1]) score += 20;
+    if (h >= crop.humidityRange[0] && h <= crop.humidityRange[1]) score += 20;
+    if (ph >= crop.phRange[0] && ph <= crop.phRange[1]) score += 20;
+    if (sm >= crop.moistureRange[0] && sm <= crop.moistureRange[1]) score += 10;
+    if (ec >= crop.ecRange[0] && ec <= crop.ecRange[1]) score += 10;
+    return { name: crop.name, score: Math.round(score) };
+  }).sort((a,b)=>b.score-a.score);
+}
+
+document.getElementById('cropForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const params = {
+    soilType: document.getElementById('soilType').value,
+    soilMoisture: document.getElementById('soilMoisture').value,
+    soilEC: document.getElementById('soilEC').value,
+    soilPh: document.getElementById('soilPh').value,
+    temperature: document.getElementById('temperature').value,
+    humidity: document.getElementById('humidity').value,
+  };
+  const results = calculateCropScores(params);
+  const container = document.getElementById('results');
+  container.innerHTML = '';
+  results.slice(0,5).forEach((crop,idx)=>{
+    container.innerHTML += `
+      <div class="p-3 mb-3 rounded-lg ${idx===0 ? 'bg-green-200' : 'bg-gray-200'}">
+        <h4 class="font-bold">${crop.name} ${idx===0?'<span class="ml-2 text-xs bg-yellow-400 text-black px-2 py-0.5 rounded">Best Match</span>':''}</h4>
+        <div class="score-bar mt-1"><div class="score-fill" style="width:${crop.score}%"></div></div>
+        <p class="text-sm mt-1">${crop.score}% Match</p>
+      </div>
+    `;
+  });
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  document.getElementById('cropForm').reset();
+  document.getElementById('results').innerHTML = '<p class="text-gray-600">Enter soil & climate parameters to see recommendations</p><i class="fas fa-flask text-3xl mt-2 text-green-500"></i>';
+});
+</script>
+</body>
+</html>

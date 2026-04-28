@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Greenhouse Data as a Service</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0a1120; color: #e6eef8; font-family: Inter, sans-serif; }
+    .tab-active { border-bottom: 2px solid #22d3ee; color: #22d3ee; }
+    .card { background: rgba(255,255,255,0.05); border-radius: 1rem; padding: 1rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-7xl mx-auto">
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold mb-2">🌱 Greenhouse Platform</h1>
+      <p class="text-slate-400">Click the tab below to explore Data as a Service</p>
+    </header>
+
+    <!-- Main Tabs -->
+    <div class="flex space-x-6 border-b border-slate-600 mb-6">
+      <button class="main-tab tab-active" data-tab="daas">Data as a Service</button>
+    </div>
+
+    <!-- Data as a Service (hidden until clicked) -->
+    <div id="tab-daas" class="tab-content hidden">
+      <!-- Sub-tabs -->
+      <div class="flex space-x-4 border-b border-slate-600 mb-4">
+        <button class="sub-tab tab-active" data-subtab="realtime">Realtime</button>
+        <button class="sub-tab" data-subtab="historical">Historical</button>
+      </div>
+
+      <!-- Realtime -->
+      <div id="subtab-realtime" class="subtab-content">
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Select Time Range</label>
+          <select id="rtRange" class="p-2 bg-slate-800 rounded">
+            <option value="24">Last 24 Hours</option>
+            <option value="48">Last 48 Hours</option>
+            <option value="72">Last 72 Hours</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Select Sensors</label>
+          <div class="space-y-2">
+            <label><input type="checkbox" class="sensor" value="soil_moisture" checked> Soil Moisture</label><br>
+            <label><input type="checkbox" class="sensor" value="soil_ec" checked> Soil EC</label><br>
+            <label><input type="checkbox" class="sensor" value="soil_ph" checked> Soil pH</label><br>
+            <label><input type="checkbox" class="sensor" value="temp" checked> Greenhouse Temperature</label><br>
+            <label><input type="checkbox" class="sensor" value="humidity" checked> Greenhouse Humidity</label>
+          </div>
+        </div>
+
+        <div class="card h-96">
+          <canvas id="rtChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Historical -->
+      <div id="subtab-historical" class="subtab-content hidden">
+        <div class="mb-4 grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm mb-1">Start Date</label>
+            <input type="date" id="histStart" class="p-2 bg-slate-800 rounded w-full" />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">End Date</label>
+            <input type="date" id="histEnd" class="p-2 bg-slate-800 rounded w-full" />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm mb-1">Select Sensors</label>
+          <div class="space-y-2">
+            <label><input type="checkbox" class="hsensor" value="soil_moisture" checked> Soil Moisture</label><br>
+            <label><input type="checkbox" class="hsensor" value="soil_ec" checked> Soil EC</label><br>
+            <label><input type="checkbox" class="hsensor" value="soil_ph" checked> Soil pH</label><br>
+            <label><input type="checkbox" class="hsensor" value="temp" checked> Greenhouse Temperature</label><br>
+            <label><input type="checkbox" class="hsensor" value="humidity" checked> Greenhouse Humidity</label>
+          </div>
+        </div>
+
+        <div class="card h-96">
+          <canvas id="histChart"></canvas>
+        </div>
+        <button id="loadHist" class="mt-3 px-3 py-2 bg-emerald-400 text-slate-900 rounded">Load Historical Data</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- Main tab switching ---
+const mainTabs = document.querySelectorAll('.main-tab');
+mainTabs.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    mainTabs.forEach(b=>b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// --- Sub-tab switching ---
+const subTabs = document.querySelectorAll('.sub-tab');
+const subContents = document.querySelectorAll('.subtab-content');
+subTabs.forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    subTabs.forEach(b=>b.classList.remove('tab-active'));
+    btn.classList.add('tab-active');
+    subContents.forEach(sc=>sc.classList.add('hidden'));
+    document.getElementById('subtab-'+btn.dataset.subtab).classList.remove('hidden');
+  });
+});
+
+// --- Sensor simulation helpers ---
+function generateData(hours) {
+  const now = new Date();
+  const labels = [];
+  const sensors = { soil_moisture: [], soil_ec: [], soil_ph: [], temp: [], humidity: [] };
+  for (let i=hours;i>0;i--) {
+    const t = new Date(now.getTime() - i*3600*1000);
+    labels.push(t.getHours()+":00");
+    sensors.soil_moisture.push(Math.round(30+20*Math.random()));
+    sensors.soil_ec.push((1+Math.random()*2).toFixed(2));
+    sensors.soil_ph.push((6+Math.random()*2).toFixed(2));
+    sensors.temp.push(Math.round(20+5*Math.random()));
+    sensors.humidity.push(Math.round(50+30*Math.random()));
+  }
+  return {labels, sensors};
+}
+
+function buildDatasets(sensorKeys, data) {
+  const colors = {
+    soil_moisture: 'rgba(34,197,94,1)',
+    soil_ec: 'rgba(59,130,246,1)',
+    soil_ph: 'rgba(234,179,8,1)',
+    temp: 'rgba(239,68,68,1)',
+    humidity: 'rgba(139,92,246,1)'
+  };
+  return sensorKeys.map(k=>({ label:k, data:data[k], borderColor:colors[k], fill:false }));
+}
+
+// --- Realtime chart ---
+const rtChart = new Chart(document.getElementById('rtChart'),{
+  type:'line', data:{labels:[],datasets:[]}, options:{responsive:true,maintainAspectRatio:false}
+});
+
+function updateRealtime() {
+  const hours = parseInt(document.getElementById('rtRange').value);
+  const sensorsSelected = Array.from(document.querySelectorAll('.sensor:checked')).map(cb=>cb.value);
+  const payload = generateData(hours);
+  rtChart.data.labels = payload.labels;
+  rtChart.data.datasets = buildDatasets(sensorsSelected,payload.sensors);
+  rtChart.update();
+}
+
+// Bind realtime controls
+rtRange.addEventListener('change', updateRealtime);
+document.querySelectorAll('.sensor').forEach(cb=>cb.addEventListener('change', updateRealtime));
+updateRealtime();
+
+// --- Historical chart ---
+const histChart = new Chart(document.getElementById('histChart'),{
+  type:'line', data:{labels:[],datasets:[]}, options:{responsive:true,maintainAspectRatio:false}
+});
+
+document.getElementById('loadHist').addEventListener('click',()=>{
+  const sensorsSelected = Array.from(document.querySelectorAll('.hsensor:checked')).map(cb=>cb.value);
+  const start = document.getElementById('histStart').value;
+  const end = document.getElementById('histEnd').value;
+  let days = 3; // default fallback
+  if (start && end) {
+    const diff = (new Date(end)-new Date(start))/(1000*3600*24);
+    days = Math.max(1,Math.min(diff,30));
+  }
+  const hours = days*24;
+  const payload = generateData(hours);
+  histChart.data.labels = payload.labels;
+  histChart.data.datasets = buildDatasets(sensorsSelected,payload.sensors);
+  histChart.update();
+});
+</script>
+</body>
+</html>

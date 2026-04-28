@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<!--
+  Standalone fertigation UI. pH/EC hint in Apply uses the same scoring as
+  gaas/frontend/src/lib/fertilizerRecommend.js (Agricultural Services → Fertilizer Recommendation).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fertigation Control System</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f0f4f8;
+      color: #333;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    .container {
+      padding: 2rem;
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    .control-section {
+      margin: 2rem 0;
+    }
+    .control-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    select, input[type="range"], input[type="number"] {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .slider-value {
+      display: block;
+      margin-top: 0.3rem;
+      font-weight: bold;
+      text-align: right;
+    }
+    .action-buttons {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .action-button {
+      padding: 0.8rem 1.5rem;
+      margin: 0.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+    .primary {
+      background-color: #27ae60;
+      color: white;
+    }
+    .primary:hover {
+      background-color: #1e874b;
+    }
+    .secondary {
+      background-color: #e74c3c;
+      color: white;
+    }
+    .secondary:hover {
+      background-color: #c0392b;
+    }
+    .info-box {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #ecf0f1;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+    .chart-container {
+      margin-top: 2rem;
+      padding: 1rem;
+      border: 2px dashed #bbb;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    canvas {
+      width: 100% !important;
+      height: 250px !important;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Greenhouse Management - Fertigation System</h1>
+  </header>
+  
+  <div class="container">
+    <h2>Fertigation Control Model</h2>
+    <p style="text-align:center;">Configure your fertigation settings to optimize plant growth.</p>
+    
+    <div class="control-section">
+      <div class="control-group">
+        <label for="fertilizerType">Fertilizer Type</label>
+        <select id="fertilizerType">
+          <option value="NPK">NPK Balanced</option>
+          <option value="Nitrogen">Nitrogen Rich</option>
+          <option value="Phosphorus">Phosphorus Rich</option>
+          <option value="Potassium">Potassium Rich</option>
+        </select>
+      </div>
+      
+      <div class="control-group">
+        <label for="dosage">Dosage (ml/L)</label>
+        <input type="range" id="dosage" min="1" max="10" value="5" 
+          oninput="document.getElementById('dosageValue').innerText = this.value + ' ml/L'">
+        <span id="dosageValue" class="slider-value">5 ml/L</span>
+      </div>
+
+      <div class="control-group">
+        <label for="schedule">Schedule</label>
+        <select id="schedule">
+          <option value="daily">Daily</option>
+          <option value="alternate">Alternate Days</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="targetPH">Target pH</label>
+        <input type="number" id="targetPH" min="4" max="9" step="0.1" value="6.5">
+      </div>
+
+      <div class="control-group">
+        <label for="targetEC">Target EC (dS/m)</label>
+        <input type="number" id="targetEC" min="0.1" max="5" step="0.1" value="1.5">
+      </div>
+    </div>
+    
+    <div class="action-buttons">
+      <button class="action-button primary" onclick="applySettings()">Apply Settings</button>
+      <button class="action-button secondary" onclick="resetSettings()">Reset</button>
+    </div>
+    
+    <div class="chart-container">
+      <h3 style="text-align:center;">Fertigation Analytics</h3>
+      <canvas id="fertigationChart"></canvas>
+    </div>
+    
+    <div class="info-box">
+      <h3>Fertigation Model Information</h3>
+      <p>
+        The fertigation control system allows you to manage fertilizer type, dosage, 
+        pH and EC levels, and application schedules. Analytics visualize 
+        nutrient delivery, soil response, and plant uptake trends for optimal growth.
+      </p>
+    </div>
+  </div>
+  
+  <script>
+    // pH/EC scoring — keep in sync with gaas/frontend/src/lib/fertilizerRecommend.js
+    function fertilizerTopMatch(ph, ec) {
+      const rows = [
+        { name: "NPK 19-19-19", ph: [5.5, 7.5], ec: [0.5, 2.5] },
+        { name: "Urea (46-0-0)", ph: [5.0, 7.0], ec: [0.5, 2.0] },
+        { name: "DAP (18-46-0)", ph: [6.0, 7.5], ec: [1.0, 2.5] },
+        { name: "MOP (0-0-60)", ph: [5.5, 7.0], ec: [0.8, 2.0] },
+        { name: "Calcium Nitrate", ph: [5.5, 7.0], ec: [0.5, 2.0] }
+      ];
+      const inR = (v, a, b) => v >= a && v <= b;
+      let best = { name: rows[0].name, m: 0 };
+      rows.forEach((r) => {
+        let m = 50;
+        if (inR(ph, r.ph[0], r.ph[1])) m += 25;
+        if (inR(ec, r.ec[0], r.ec[1])) m += 25;
+        if (m > best.m) best = { name: r.name, m };
+      });
+      return best;
+    }
+
+    function applySettings() {
+      const type = document.getElementById("fertilizerType").value;
+      const dosage = document.getElementById("dosage").value;
+      const schedule = document.getElementById("schedule").value;
+      const pH = document.getElementById("targetPH").value;
+      const ec = document.getElementById("targetEC").value;
+      const phn = Number(pH);
+      const ecn = Number(ec);
+      const hint = Number.isFinite(phn) && Number.isFinite(ecn)
+        ? fertilizerTopMatch(phn, ecn)
+        : null;
+
+      alert(
+        `Fertigation settings applied:\n\n` +
+        `Fertilizer: ${type}\nDosage: ${dosage} ml/L\nSchedule: ${schedule}\n` +
+        `Target pH: ${pH}\nTarget EC: ${ec} dS/m` +
+        (hint ? `\n\nSuggested blend (pH/EC match): ${hint.name} (${hint.m}%)` : "")
+      );
+    }
+
+    function resetSettings() {
+      document.getElementById("fertilizerType").value = "NPK";
+      document.getElementById("dosage").value = 5;
+      document.getElementById("dosageValue").innerText = "5 ml/L";
+      document.getElementById("schedule").value = "daily";
+      document.getElementById("targetPH").value = 6.5;
+      document.getElementById("targetEC").value = 1.5;
+      alert("Settings reset to defaults.");
+    }
+
+    // Mock Fertigation Analytics Chart
+    const ctx = document.getElementById('fertigationChart').getContext('2d');
+    const fertigationChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5"],
+        datasets: [
+          {
+            label: 'Target pH',
+            data: [6.5, 6.5, 6.5, 6.5, 6.5],
+            borderColor: '#27ae60',
+            borderDash: [5,5],
+            fill: false
+          },
+          {
+            label: 'Actual pH',
+            data: [6.3, 6.4, 6.7, 6.6, 6.5],
+            borderColor: '#2980b9',
+            fill: false
+          },
+          {
+            label: 'Target EC',
+            data: [1.5, 1.5, 1.5, 1.5, 1.5],
+            borderColor: '#e67e22',
+            borderDash: [5,5],
+            fill: false
+          },
+          {
+            label: 'Actual EC',
+            data: [1.4, 1.6, 1.5, 1.7, 1.6],
+            borderColor: '#c0392b',
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' }
+        },
+        scales: {
+          y: { beginAtZero: false }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
