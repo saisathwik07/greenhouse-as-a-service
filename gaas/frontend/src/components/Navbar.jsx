@@ -1,5 +1,5 @@
 import { GoogleLogin } from "@react-oauth/google";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import UserProfileMenu from "./UserProfileMenu";
 import NotificationBell from "./NotificationBell";
@@ -51,16 +51,6 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
 
       {/* Actions — right */}
       <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
-        {user && isAdmin && (
-          <Link
-            to="/admin"
-            className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50/80 hover:text-emerald-900 sm:px-3 sm:text-sm"
-            title="Admin Dashboard"
-          >
-            <span className="sm:hidden">Admin</span>
-            <span className="hidden sm:inline">Admin Dashboard</span>
-          </Link>
-        )}
         {!user ? (
           <>
             {/* Email auth: switch form mode on LoginPage */}
@@ -110,6 +100,7 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
               email={user.email}
               pictureUrl={user.picture}
               isGuest={isGuest}
+              isAdmin={isAdmin}
               onLogout={logout}
             />
           </>

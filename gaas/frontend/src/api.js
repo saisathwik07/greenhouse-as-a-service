@@ -197,6 +197,26 @@ api.interceptors.response.use(
         window.location.assign("/");
       }
     }
+
+    // Account suspended mid-session: drop tokens so the user lands back on
+    // the login page with the suspension banner instead of seeing repeated
+    // permission-denied modals across the app.
+    if (status === 403 && error.response?.data?.code === "ACCOUNT_BLOCKED" && getAuthToken()) {
+      console.warn("[api] 403 ACCOUNT_BLOCKED — clearing session");
+      clearAuthSessionAndTokens();
+      if (typeof window !== "undefined") {
+        const reason = error.response?.data?.reason || "";
+        try {
+          sessionStorage.setItem(
+            "gaas-blocked-reason",
+            reason || "Your account has been suspended. Please contact support."
+          );
+        } catch {
+          /* ignore */
+        }
+        window.location.assign("/");
+      }
+    }
     return Promise.reject(error);
   }
 );

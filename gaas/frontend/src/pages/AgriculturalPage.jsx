@@ -605,13 +605,13 @@ function YieldPrediction() {
         let hint = "";
         if (status === 404) {
           hint =
-            " Flask must serve /api/yield/* on port 5000 (python gaas/ai-service/crop_api.py or python app.py). Check .env: VITE_DEV_FLASK_URL must be http://127.0.0.1:5000 not 5100. Restart Vite after changing env. Train: cd yield-prediction && python model/train.py";
+            " Flask must serve /api/yield/* on port 5000 (python gaas/ai-service/crop_api.py). Check .env: VITE_DEV_FLASK_URL must be http://127.0.0.1:5000 not 5100. Restart Vite after changing env. Train: cd gaas/ai-service/yield-prediction && python train.py";
         } else if (status === 502) {
           hint =
             " Proxy/upstream error. In dev we call http://127.0.0.1:5000 directly — start crop_api (python crop_api.py) from gaas/ai-service.";
         } else if (status === 503) {
           hint =
-            " Train the model: cd yield-prediction && python model/train.py";
+            " Train the model: cd gaas/ai-service/yield-prediction && python train.py";
         }
         setError((serverData.error || `Request failed (${status || "network"})`) + hint);
         return;
@@ -631,7 +631,7 @@ function YieldPrediction() {
       console.error("Yield prediction failed", err);
       setError(
         err?.message?.includes("Failed to fetch")
-          ? "Could not reach the ML API (Flask on :5000). From gaas/frontend run: npm run dev:all — or in another terminal: cd gaas/ai-service && python crop_api.py. Train once: cd yield-prediction && python model/train.py"
+          ? "Could not reach the ML API (Flask on :5000). From gaas/frontend run: npm run dev:all — or in another terminal: cd gaas/ai-service && python crop_api.py. Train once: cd gaas/ai-service/yield-prediction && python train.py"
           : err?.message || "Something went wrong."
       );
     } finally {

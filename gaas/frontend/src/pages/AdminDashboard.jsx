@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Area,
@@ -26,6 +26,7 @@ import {
 } from "../api";
 import ActivityFeed from "../components/admin/ActivityFeed";
 import UserDrawer from "../components/admin/UserDrawer";
+import { useAuth } from "../hooks/useAuth";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -142,8 +143,33 @@ function FunnelView({ funnel }) {
   );
 }
 
+const VALID_TABS = new Set(["overview", "users", "analytics", "churn"]);
+
 export default function AdminDashboard() {
-  const [tab, setTab] = useState("overview");
+  const { user: currentAdmin } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (() => {
+    const t = (searchParams.get("tab") || "").toLowerCase();
+    return VALID_TABS.has(t) ? t : "overview";
+  })();
+  const [tab, setTab] = useState(initialTab);
+
+  useEffect(() => {
+    const t = (searchParams.get("tab") || "").toLowerCase();
+    if (VALID_TABS.has(t) && t !== tab) setTab(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const switchTab = (next) => {
+    setTab(next);
+    const sp = new URLSearchParams(searchParams);
+    if (next === "overview") {
+      sp.delete("tab");
+    } else {
+      sp.set("tab", next);
+    }
+    setSearchParams(sp, { replace: true });
+  };
   const [users, setUsers] = useState([]);
   const [revenue, setRevenue] = useState(null);
   const [funnel, setFunnel] = useState(null);
@@ -218,6 +244,15 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  const refreshUsers = async () => {
+    try {
+      const { data } = await api.get("/admin/users?limit=100");
+      setUsers(Array.isArray(data?.users) ? data.users : []);
+    } catch (err) {
+      console.warn("[admin] refreshUsers failed:", err.message);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
@@ -289,7 +324,7 @@ export default function AdminDashboard() {
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setTab(t.id)}
+                  onClick={() => switchTab(t.id)}
                   className={`relative px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
                     isActive
                       ? "bg-gaas-accent text-white"
@@ -484,7 +519,14 @@ export default function AdminDashboard() {
                         className="border-b border-gaas-border/50 hover:bg-gaas-accent/5 cursor-pointer transition"
                       >
                         <td className="py-2 pr-3 font-medium text-gaas-heading">
-                          {u.name}
+                          <span className="inline-flex items-center gap-2">
+                            {u.name}
+                            {u.isBlocked && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold uppercase">
+                                Blocked
+                              </span>
+                            )}
+                          </span>
                         </td>
                         <td className="py-2 pr-3 text-gaas-muted">{u.email}</td>
                         <td className="py-2 pr-3">
@@ -733,7 +775,12 @@ export default function AdminDashboard() {
         <ActivityFeed />
       </aside>
 
-      <UserDrawer userId={activeUserId} onClose={() => setActiveUserId(null)} />
+      <UserDrawer
+        userId={activeUserId}
+        onClose={() => setActiveUserId(null)}
+        onUserChanged={refreshUsers}
+        currentAdminId={currentAdmin?.uid || currentAdmin?.id || null}
+      />
     </div>
   );
 }

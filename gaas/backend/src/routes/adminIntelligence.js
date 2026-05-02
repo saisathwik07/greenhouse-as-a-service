@@ -88,8 +88,15 @@ router.get("/users/:id/insights", async (req, res, next) => {
       (s.addons || []).forEach((x) => allTimePurchasedSet.add(x));
     });
 
+    const quotaSince = user.quotaResetAt ? new Date(user.quotaResetAt) : null;
+    const usageMatch = {
+      userId: new mongoose.Types.ObjectId(id),
+      type: "feature_used",
+      ...(quotaSince ? { createdAt: { $gt: quotaSince } } : {}),
+    };
+
     const featureUsageAgg = await ActivityEvent.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(id), type: "feature_used" } },
+      { $match: usageMatch },
       {
         $group: {
           _id: "$featureKey",
@@ -127,6 +134,10 @@ router.get("/users/:id/insights", async (req, res, next) => {
         planStartDate: user.planStartDate,
         planEndDate: user.planEndDate,
         walletBalance: user.walletBalance || 0,
+        isBlocked: !!user.isBlocked,
+        blockedAt: user.blockedAt || null,
+        blockedReason: user.blockedReason || "",
+        quotaResetAt: user.quotaResetAt || null,
       },
       activeSubscription: activeSub
         ? {
@@ -203,10 +214,7 @@ router.get("/users/:id/insights", async (req, res, next) => {
           userId: id,
           type: "download",
         }),
-        featureCallsCount: await ActivityEvent.countDocuments({
-          userId: id,
-          type: "feature_used",
-        }),
+        featureCallsCount: await ActivityEvent.countDocuments(usageMatch),
       },
     });
   } catch (error) {

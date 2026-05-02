@@ -14,12 +14,14 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
 BASE_DIR = Path(__file__).resolve().parent
-# Workspace: gaas/ai-service → ../../yield-prediction/model (train with yield-prediction/model/train.py)
-YIELD_MODEL_DIR = (BASE_DIR / "../../yield-prediction/model").resolve()
+# Centralized AI service layout (post-cleanup):
+#   gaas/ai-service/crop-prediction/   — crop dataset + greenhouse sensor stream
+#   gaas/ai-service/yield-prediction/  — trained sklearn pipeline + meta
+YIELD_MODEL_DIR = BASE_DIR / "yield-prediction"
 YIELD_MODEL_PATH = YIELD_MODEL_DIR / "yield_model.pkl"
 YIELD_META_PATH = YIELD_MODEL_DIR / "yield_model_meta.json"
-CROP_DATA_PATH = (BASE_DIR / "../crop_prediction/Crop_recommendation.csv").resolve()
-SENSOR_DATA_PATH = (BASE_DIR / "../crop_prediction/greenhouse_sensors.csv").resolve()
+CROP_DATA_PATH = BASE_DIR / "crop-prediction" / "Crop_recommendation.csv"
+SENSOR_DATA_PATH = BASE_DIR / "crop-prediction" / "greenhouse_sensors.csv"
 
 FEATURES = ["N", "P", "K", "temperature", "humidity", "ph", "rainfall"]
 TARGET = "label"
@@ -377,7 +379,7 @@ def _yield_load():
         if not YIELD_MODEL_PATH.is_file():
             raise FileNotFoundError(
                 f"Yield model not found at {YIELD_MODEL_PATH}. "
-                "Run: cd yield-prediction && python model/train.py"
+                "Run: cd gaas/ai-service/yield-prediction && python train.py"
             )
         _yield_pipeline = joblib.load(YIELD_MODEL_PATH)
     if _yield_meta_cache is None:

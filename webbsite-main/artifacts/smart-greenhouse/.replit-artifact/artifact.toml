@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Smart Greenhouse as a Service"
+version = "1.0.0"
+id = "artifacts/smart-greenhouse"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21525
+
+[services.development]
+run = "pnpm --filter @workspace/smart-greenhouse run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/smart-greenhouse", "run", "build" ]
+publicDir = "artifacts/smart-greenhouse/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21525"
+BASE_PATH = "/"

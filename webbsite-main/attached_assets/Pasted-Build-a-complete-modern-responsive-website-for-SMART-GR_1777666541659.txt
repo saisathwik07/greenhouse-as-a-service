@@ -1,0 +1,209 @@
+Build a complete modern responsive website for:
+
+SMART GREENHOUSE AS A SERVICE
+KITSW CSE(IoT) – Industrial Internet of Things Laboratory
+
+This is a real smart agriculture project developed at Kakatiya Institute of Technology and Science (KITSW), Warangal.
+
+About KITSW:
+- Established in 1980
+- Autonomous engineering institution
+- 65-acre campus
+- Strong innovation ecosystem
+- CSE(IoT) department works on Industrial IoT applications
+- Greenhouse monitoring systems are part of practical IoT implementations
+
+This website should feel like a professional agritech startup + university innovation lab project.
+
+------------------------------------------------
+
+USE THE PROVIDED IMAGES AUTOMATICALLY IN THE RIGHT SECTIONS:
+
+Images include:
+- Smart greenhouse exterior
+- Smart greenhouse signboard
+- Faculty/team images
+- Plantation activity
+- IoT sensor images
+- Plant growth images
+- Tomato harvest images
+
+Automatically place them correctly throughout the website.
+
+------------------------------------------------
+
+WEBSITE SECTIONS:
+
+1. HERO SECTION
+Large full-screen hero
+
+Headline:
+Smart Greenhouse as a Service
+
+Subheadline:
+Revolutionizing agriculture through IoT automation, smart irrigation, precision farming, and sustainable crop production.
+
+CTA Buttons:
+Explore Project
+Contact Team
+
+Background:
+Use greenhouse image
+
+Add subtle animations:
+floating particles
+parallax
+fade effects
+
+------------------------------------------------
+
+2. ABOUT THE PROJECT
+
+Use signboard image
+
+Content:
+The Smart Green House project developed by KITSW CSE(IoT) focuses on combining agriculture with Industrial IoT technologies to improve farming efficiency.
+
+Goals:
+- Reduce water wastage
+- Increase crop yield
+- Enable smart farming
+- Monitor crops remotely
+- Promote sustainable agriculture
+
+------------------------------------------------
+
+3. PROBLEM STATEMENT
+
+Traditional farming problems:
+- Water wastage
+- Manual monitoring
+- Climate dependency
+- Low efficiency
+- Poor crop tracking
+
+------------------------------------------------
+
+4. HOW IT WORKS
+
+Timeline animation:
+
+Step 1: Soil preparation
+Step 2: Plantation
+Step 3: Sensor deployment
+Step 4: Smart irrigation
+Step 5: Real-time monitoring
+Step 6: Harvest
+
+Use plantation images
+
+------------------------------------------------
+
+5. TECHNOLOGY SECTION
+
+Use IoT sensor image
+
+Show technologies:
+
+- IoT Sensors
+- LoRaWAN communication
+- Soil moisture monitoring
+- Temperature monitoring
+- Automated irrigation
+- Smart greenhouse infrastructure
+- Data collection systems
+
+------------------------------------------------
+
+6. LIVE GREENHOUSE GALLERY
+
+Create image gallery section
+
+Use all greenhouse images
+
+Masonry grid layout
+Hover zoom effects
+
+------------------------------------------------
+
+7. TEAM SECTION
+
+Use faculty/team images
+
+Show:
+Faculty mentors
+Researchers
+Student contributors
+
+------------------------------------------------
+
+8. CROP GROWTH SECTION
+
+Use plant growth images
+
+Show progress from seed to mature plants
+
+------------------------------------------------
+
+9. RESULTS / HARVEST SECTION
+
+Use tomato harvest images
+
+Metrics cards:
+
+Water Saved
+Crop Yield Increased
+Automation Efficiency
+Sustainable Farming Impact
+
+------------------------------------------------
+
+10. WHY THIS PROJECT MATTERS
+
+- Smart agriculture
+- Food sustainability
+- IoT innovation
+- Future farming solutions
+
+------------------------------------------------
+
+11. ACHIEVEMENTS
+
+Mention:
+
+Built at KITSW Innovation Ecosystem
+Real-world greenhouse implementation
+Industrial IoT practical application
+Sustainable agriculture experimentation
+
+------------------------------------------------
+
+12. CONTACT SECTION
+
+KITSW
+Warangal, Telangana
+
+Contact form
+Email
+Social links
+
+------------------------------------------------
+
+DESIGN REQUIREMENTS:
+
+- Modern SaaS style
+- Green + white premium theme
+- Smooth animations
+- Scroll reveal
+- Glassmorphism cards
+- Fully responsive
+- Professional typography
+- Startup landing page style
+- Must be full website
+- Do not generate only 2 sections
+
+TECH STACK:
+React + Tailwind CSS + Framer Motion animations
+
+IMPORTANT:
+Automatically use uploaded images in correct sections.

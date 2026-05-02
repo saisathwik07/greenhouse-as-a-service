@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
 from sklearn.tree import DecisionTreeRegressor
 
-DATASET_PATH = (Path(__file__).resolve().parent / "../../crop_prediction/Crop_recommendation.csv").resolve()
+DATASET_PATH = Path(__file__).resolve().parent / "crop-prediction" / "Crop_recommendation.csv"
 
 
 class SoilAnalysisCore:

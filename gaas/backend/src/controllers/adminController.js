@@ -44,6 +44,8 @@ async function listUsers(req, res) {
       picture: u.picture,
       createdAt: u.createdAt,
       lastLoginAt: u.lastLoginAt,
+      isBlocked: !!u.isBlocked,
+      blockedAt: u.blockedAt || null,
     }));
 
     return res.json({

@@ -1,21 +1,35 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 /**
  * Email/password + guest entry. Google Sign-In lives in `Navbar` when logged out.
- * Optional `mode` / `onModeChange` let the parent `Navbar` toggle login vs signup.
+ *
+ * Mode resolution order (highest first):
+ *   1. explicit `mode` prop (used by the navbar's segmented control)
+ *   2. URL pathname — `/signup` → signup, anything else → login
+ *   3. local internal state (legacy fallback)
+ *
+ * The "switch mode" link below the form navigates between `/login` and
+ * `/signup` so the URL stays the source of truth and direct links work.
  */
 export default function LoginPage({ mode: controlledMode, onModeChange } = {}) {
   const { login, signup, continueAsGuest } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [internalMode, setInternalMode] = useState("login");
   const isControlled =
     controlledMode !== undefined && typeof onModeChange === "function";
-  const mode = isControlled ? controlledMode : internalMode;
+  const urlMode = location.pathname.toLowerCase().startsWith("/signup")
+    ? "signup"
+    : null;
+  const mode = isControlled ? controlledMode : urlMode || internalMode;
   const setMode = (next) => {
     if (isControlled) onModeChange(next);
     else setInternalMode(next);
+    if (urlMode !== null || location.pathname.toLowerCase().startsWith("/login")) {
+      navigate(next === "signup" ? "/signup" : "/login", { replace: true });
+    }
   };
 
   const [email, setEmail] = useState("");

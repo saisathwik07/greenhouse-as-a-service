@@ -58,6 +58,26 @@ const userSchema = new mongoose.Schema(
     /** Activity counters for funnel + churn metrics. */
     loginCount: { type: Number, default: 0, min: 0 },
     lastActiveAt: { type: Date, default: null },
+
+    /**
+     * Admin moderation state. Blocked users are rejected at login and on every
+     * authenticated request. Default false so existing accounts behave as before.
+     */
+    isBlocked: { type: Boolean, default: false, index: true },
+    blockedAt: { type: Date, default: null },
+    blockedReason: { type: String, default: "", trim: true, maxlength: 240 },
+    blockedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    /**
+     * Anchor used to "reset" usage quotas without deleting audit history. Any
+     * `feature_used` ActivityEvent with createdAt <= quotaResetAt is considered
+     * cleared and excluded from quota counters.
+     */
+    quotaResetAt: { type: Date, default: null },
   },
   { timestamps: false }
 );

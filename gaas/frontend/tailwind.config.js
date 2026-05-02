@@ -4,7 +4,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"]
+        sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        // Used by the public landing page hero/section headings. Existing
+        // dashboard pages don't reference `font-serif`, so this is additive.
+        serif: ["'Playfair Display'", "Georgia", "Cambria", "serif"],
+        display: ["'Plus Jakarta Sans'", "Inter", "system-ui", "sans-serif"]
       },
       colors: {
         gaas: {
@@ -26,6 +30,43 @@ export default {
           text: "#374151",
           heading: "#111827",
           navbar: "#FFFFFF"
+        },
+        /*
+         * Shadcn-style tokens for the public landing only (`webbsite-main` smart‑greenhouse).
+         * Confirmed absent from dashboard pages (`text-primary`, `bg-card`, etc.).
+         */
+        border: "hsl(145 15% 90%)",
+        input: "hsl(145 15% 90%)",
+        ring: "hsl(145 48% 20%)",
+        background: "hsl(0 0% 100%)",
+        foreground: "hsl(145 50% 10%)",
+        primary: {
+          DEFAULT: "hsl(145 48% 20%)",
+          foreground: "hsl(0 0% 100%)"
+        },
+        secondary: {
+          DEFAULT: "hsl(145 20% 90%)",
+          foreground: "hsl(145 50% 10%)"
+        },
+        muted: {
+          DEFAULT: "hsl(145 10% 95%)",
+          foreground: "hsl(145 20% 40%)"
+        },
+        accent: {
+          DEFAULT: "hsl(46 65% 52%)",
+          foreground: "hsl(0 0% 100%)"
+        },
+        destructive: {
+          DEFAULT: "hsl(0 84% 60%)",
+          foreground: "hsl(0 0% 100%)"
+        },
+        card: {
+          DEFAULT: "hsl(0 0% 100%)",
+          foreground: "hsl(145 50% 10%)"
+        },
+        popover: {
+          DEFAULT: "hsl(0 0% 100%)",
+          foreground: "hsl(145 50% 10%)"
         }
       },
       boxShadow: {

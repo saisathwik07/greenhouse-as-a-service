@@ -86,6 +86,22 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    if (user.isBlocked && String(user.role || "").toLowerCase() !== "admin") {
+      await trackEvent({
+        userId: user._id,
+        type: "login_failed",
+        metadata: { reason: "blocked", email: normalizedEmail },
+        req,
+        user,
+      });
+      return res.status(403).json({
+        error:
+          "Your account has been suspended by an administrator. Please contact support.",
+        code: "ACCOUNT_BLOCKED",
+        reason: user.blockedReason || "",
+      });
+    }
+
     user.lastLoginAt = new Date();
     await user.save();
     await Promise.all([
@@ -178,6 +194,27 @@ router.post("/google-login", async (req, res) => {
     let user;
     let isNewSignup = false;
     try {
+      const existing = await User.findOne({ email });
+      if (
+        existing &&
+        existing.isBlocked &&
+        String(existing.role || "").toLowerCase() !== "admin"
+      ) {
+        await trackEvent({
+          userId: existing._id,
+          type: "login_failed",
+          metadata: { reason: "blocked", provider: "google", email },
+          req,
+          user: existing,
+        });
+        return res.status(403).json({
+          error:
+            "Your account has been suspended by an administrator. Please contact support.",
+          code: "ACCOUNT_BLOCKED",
+          reason: existing.blockedReason || "",
+        });
+      }
+
       user = await User.findOneAndUpdate(
         { email },
         {

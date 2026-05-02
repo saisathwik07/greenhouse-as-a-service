@@ -9,10 +9,11 @@ import { useAuth } from "./hooks/useAuth";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import LoginPage from "./pages/LoginPage";
+import LandingPage from "./pages/LandingPage";
 import DashboardPage from "./pages/DashboardPage";
 import DataPage from "./pages/DataPage";
 import AgriculturalPage from "./pages/AgriculturalPage";
-import IoTPage from "./pages/IoTPage";
+import IoTMonitoringService from "./pages/IoTMonitoringService";
 import AIPage from "./pages/AIPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
 import BillingPage from "./pages/BillingPage";
@@ -21,7 +22,6 @@ import PaymentFailure from "./pages/PaymentFailure";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import HomePage from "./pages/HomePage";
 import PestDisease from "./pages/PestDisease";
-import LiveDataPage from "./pages/LiveDataPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import HelpPage from "./pages/HelpPage";
@@ -49,11 +49,33 @@ export default function App() {
   }
 
   if (!user) {
-    return (
+    /**
+     * Public surface — landing-first flow:
+     *  - "/"               → marketing LandingPage
+     *  - "/login|/signup"  → existing auth screen (sets the form mode from the URL)
+     *  - any other path    → redirect to "/" so deep links don't 404 for guests
+     *
+     * Once the user signs in, the `if (!user)` branch is skipped and the
+     * authenticated layout below takes over with no other code changes.
+     */
+    const authShell = (mode) => (
       <div className="flex min-h-screen flex-col bg-gaas-bg">
-        <Navbar authFormMode={authFormMode} onAuthFormModeChange={setAuthFormMode} />
-        <LoginPage mode={authFormMode} onModeChange={setAuthFormMode} />
+        <Navbar
+          authFormMode={authFormMode}
+          onAuthFormModeChange={setAuthFormMode}
+        />
+        <LoginPage mode={mode} onModeChange={setAuthFormMode} />
       </div>
+    );
+
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={authShell("login")} />
+        <Route path="/signup" element={authShell("signup")} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     );
   }
 
@@ -102,15 +124,17 @@ export default function App() {
                 path="/iot"
                 element={
                   <NonGuestRoute>
-                    <IoTPage />
+                    <IoTMonitoringService />
                   </NonGuestRoute>
                 }
               />
+              {/* Legacy routes — kept for bookmark compat, all serve the
+                  unified IoT Monitoring page. */}
               <Route
                 path="/live"
                 element={
                   <NonGuestRoute>
-                    <LiveDataPage />
+                    <IoTMonitoringService />
                   </NonGuestRoute>
                 }
               />
@@ -118,7 +142,7 @@ export default function App() {
                 path="/mqtt"
                 element={
                   <NonGuestRoute>
-                    <IoTPage />
+                    <IoTMonitoringService />
                   </NonGuestRoute>
                 }
               />
