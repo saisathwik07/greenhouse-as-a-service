@@ -615,10 +615,16 @@ export default function UserDrawer({ userId, onClose, onUserChanged, currentAdmi
                             confirmLabel: "Delete forever",
                             confirmText: profile?.email,
                             onConfirm: async () => {
+                              const targetUserId = String(
+                                profile?.id || userId || ""
+                              ).trim();
                               await runAction("User deleted", () =>
-                                api.delete(`/admin/users/${userId}`, {
-                                  data: { confirmEmail: profile?.email },
-                                })
+                                // POST avoids proxies/CDNs that mishandle DELETE + JSON body
+                                // (often surfaced as misleading 404s). DELETE remains on the server for API clients.
+                                api.post(
+                                  `/admin/users/${encodeURIComponent(targetUserId)}/permanent-delete`,
+                                  { confirmEmail: profile?.email }
+                                )
                               );
                               closeConfirm();
                               onClose?.();

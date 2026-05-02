@@ -56,7 +56,25 @@ function isSelf(req, targetId) {
   return String(req.user?.id || "") === String(targetId);
 }
 
-async function loadTarget(id, res) {
+/** Normalise :id from URLs (trim, decode URI, strip accidental wrapping quotes). */
+function normalizeUserIdParam(raw) {
+  let s = String(raw ?? "").trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    /* ignore */
+  }
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
+async function loadTarget(rawId, res) {
+  const id = normalizeUserIdParam(rawId);
   if (!mongoose.isValidObjectId(id)) {
     res.status(400).json({ error: "Invalid user id" });
     return null;
@@ -179,14 +197,21 @@ router.post("/users/:id/unblock", async (req, res, next) => {
 });
 
 /**
+ * Permanent user removal (also exposed as DELETE for backwards compatibility).
+ *
  * DELETE /api/admin/users/:id
+ * POST /api/admin/users/:id/permanent-delete
+ *
+ * POST is preferred from the SPA: many proxies and edge configs mishandle DELETE
+ * with a JSON body, which can surface to clients as misleading 404s.
+ *
  * Body: { confirmEmail? }
- * Permanently deletes the user document and cascades cleanup of related
- * collections: subscriptions, payment transactions, activity events,
+ *
+ * Cascades cleanup of subscriptions, payment transactions, activity events,
  * notifications, and tickets. Audit row is written *before* the user row is
- * removed so we keep a record of who deleted whom.
+ * removed.
  */
-router.delete("/users/:id", async (req, res, next) => {
+async function handlePermanentUserDelete(req, res, next) {
   try {
     const target = await loadTarget(req.params.id, res);
     if (!target) return;
@@ -239,7 +264,10 @@ router.delete("/users/:id", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
+
+router.delete("/users/:id", handlePermanentUserDelete);
+router.post("/users/:id/permanent-delete", handlePermanentUserDelete);
 
 /**
  * POST /api/admin/users/:id/subscription

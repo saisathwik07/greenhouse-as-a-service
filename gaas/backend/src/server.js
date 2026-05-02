@@ -64,9 +64,10 @@ app.use(express.json());
 
 /** Auth: Google login + JWT; Admin: user list (MongoDB) */
 app.use("/api/auth", authRoutes);
+/** Mount granular admin user routes before the bulk admin routers for predictable routing. */
+app.use("/api/admin", adminUsersRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin", adminIntelligenceRoutes);
-app.use("/api/admin", adminUsersRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/billing", billingRoutes);
