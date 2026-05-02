@@ -2,9 +2,16 @@ const crypto = require("crypto");
 const express = require("express");
 const Razorpay = require("razorpay");
 const { authenticate } = require("../middleware/authenticate");
-const Plan = require("../models/Plan");
-const PaymentTransaction = require("../models/PaymentTransaction");
-const { activateUserPlanFromPayment } = require("../services/subscriptionService");
+const {
+  computeQuote,
+  getPublicConfig,
+} = require("../config/pricingConfig");
+const {
+  createPendingSubscription,
+  activatePendingSubscription,
+  markSubscriptionFailed,
+} = require("../services/subscriptionService");
+const { trackEvent } = require("../services/eventTracker");
 
 const router = express.Router();
 
@@ -18,69 +25,110 @@ function getRazorpayClient() {
   return new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
 }
 
-const DURATION_TO_DAYS = { monthly: 30, quarterly: 90, yearly: 365 };
+/**
+ * GET /api/payment/pricing-config
+ * Public-readable wizard config + GST. Total is *never* trusted from the
+ * client; this is for display only.
+ */
+router.get("/pricing-config", (_req, res) => {
+  res.json({
+    ...getPublicConfig(),
+    razorpayKeyId: KEY_ID || null,
+  });
+});
 
-async function resolvePlan({ plan, duration, amount }) {
-  const name = String(plan || "").trim();
-  if (!["Basic", "Pro", "Premium"].includes(name)) {
-    throw new Error("Invalid plan. Use Basic, Pro, or Premium");
+/**
+ * POST /api/payment/quote
+ * Stateless price preview for the wizard's right-side summary panel.
+ * Returns the same shape the client computes so we can reconcile mismatches.
+ */
+router.post("/quote", (req, res) => {
+  try {
+    const quote = computeQuote(req.body || {});
+    res.json({ ok: true, quote });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
   }
-  const days = DURATION_TO_DAYS[String(duration || "").toLowerCase()];
-  if (!days) {
-    throw new Error("Invalid duration. Use monthly, quarterly, or yearly");
-  }
+});
 
-  let planDoc = await Plan.findOne({ name, duration: days, price: Number(amount) / 100 });
-  if (!planDoc) {
-    planDoc = await Plan.create({
-      name,
-      price: Number(amount) / 100,
-      duration: days,
-      features: [],
-    });
-  }
-  return planDoc;
-}
-
+/**
+ * POST /api/payment/create-order
+ * Body: { userType, planName, duration, selectedServices[], addons[] }
+ *
+ * Recomputes price server-side from `pricingConfig`, creates a Razorpay
+ * order, and persists a pending Subscription document. Returns the order id
+ * + computed quote so the frontend can open Razorpay Checkout.
+ */
 router.post("/create-order", authenticate, async (req, res, next) => {
   try {
-    const { amount, currency = "INR", plan, duration, userId } = req.body || {};
-    const effectiveUserId = req.user?.id || userId;
-    if (!amount || !plan || !duration || !effectiveUserId) {
-      return res
-        .status(400)
-        .json({ error: "amount, plan, duration and userId are required" });
-    }
-    const amountPaise = Number(amount);
-    if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
-      return res.status(400).json({ error: "amount must be a positive integer (paise)" });
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
     }
 
-    const planDoc = await resolvePlan({ plan, duration, amount: amountPaise });
+    let quote;
+    try {
+      quote = computeQuote(req.body || {});
+    } catch (validationError) {
+      return res.status(400).json({ error: validationError.message });
+    }
+
+    if (quote.totalPaise <= 0) {
+      return res.status(400).json({
+        error:
+          "Total must be greater than zero. Choose at least one paid service or upgrade your plan.",
+      });
+    }
+
     const razorpay = getRazorpayClient();
     const order = await razorpay.orders.create({
-      amount: amountPaise,
-      currency: String(currency || "INR").toUpperCase(),
-      receipt: `gaas_${String(effectiveUserId).slice(-8)}_${Date.now().toString(36)}`,
+      amount: quote.totalPaise,
+      currency: quote.currency,
+      receipt: `gaas_${String(userId).slice(-8)}_${Date.now().toString(36)}`,
       notes: {
-        plan: String(plan),
-        duration: String(duration),
-        userId: String(effectiveUserId),
-        planId: String(planDoc._id),
+        userId: String(userId),
+        userType: quote.userType,
+        plan: quote.plan,
+        duration: quote.duration,
       },
     });
 
+    const subscription = await createPendingSubscription({
+      userId,
+      userType: quote.userType,
+      planName: quote.plan,
+      duration: quote.duration,
+      selectedServices: quote.selectedServices,
+      addons: quote.addons,
+      orderId: order.id,
+      totalAmount: quote.totalAmount,
+      totalPaise: quote.totalPaise,
+    });
+
+    trackEvent({
+      userId,
+      type: "subscription_started",
+      featureKey: quote.plan,
+      metadata: {
+        orderId: order.id,
+        totalAmount: quote.totalAmount,
+        userType: quote.userType,
+        plan: quote.plan,
+        duration: quote.duration,
+      },
+      req,
+    });
+
     return res.json({
+      ok: true,
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       key: KEY_ID,
-      planId: String(planDoc._id),
+      subscriptionId: String(subscription._id),
+      quote,
     });
   } catch (error) {
-    if (String(error.message || "").startsWith("Invalid")) {
-      return res.status(400).json({ error: error.message });
-    }
     if (String(error.message || "").includes("Razorpay keys")) {
       return res.status(500).json({ error: error.message });
     }
@@ -88,31 +136,30 @@ router.post("/create-order", authenticate, async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/payment/verify
+ * Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+ *
+ * Verifies HMAC-SHA256 signature, promotes the matching pending Subscription
+ * to "success", and unlocks the user's plan tier + entitlements.
+ */
 router.post("/verify", authenticate, async (req, res, next) => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      userId,
-      plan,
-      duration,
-      planId,
     } = req.body || {};
-    const effectiveUserId = req.user?.id || userId;
 
-    if (
-      !razorpay_order_id ||
-      !razorpay_payment_id ||
-      !razorpay_signature ||
-      !effectiveUserId ||
-      !plan ||
-      !duration ||
-      !planId
-    ) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
         error:
-          "razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, plan, duration and planId are required",
+          "razorpay_order_id, razorpay_payment_id and razorpay_signature are required",
       });
     }
 
@@ -120,63 +167,65 @@ router.post("/verify", authenticate, async (req, res, next) => {
       return res.status(500).json({ error: "RAZORPAY_KEY_SECRET is not configured" });
     }
 
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
     const expected = crypto
       .createHmac("sha256", KEY_SECRET)
-      .update(body)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (expected !== razorpay_signature) {
-      await PaymentTransaction.create({
-        userId: effectiveUserId,
-        planId,
-        paymentId: razorpay_payment_id,
+      await markSubscriptionFailed({
         orderId: razorpay_order_id,
-        amount: 0,
-        status: "failed",
-        paymentDate: new Date(),
+        paymentId: razorpay_payment_id,
+        signature: razorpay_signature,
       }).catch(() => {});
       return res.status(400).json({ ok: false, error: "Invalid payment signature" });
     }
 
-    const planDoc = await Plan.findById(planId);
-    if (!planDoc) {
-      return res.status(404).json({ error: "Plan not found" });
-    }
-    const amountPaise = Number(req.body?.amount || 0) || Math.round(Number(planDoc.price) * 100);
-
-    const { user } = await activateUserPlanFromPayment({
-      userId: effectiveUserId,
-      planId: planDoc._id,
-      paymentId: razorpay_payment_id,
+    const { subscription, user } = await activatePendingSubscription({
       orderId: razorpay_order_id,
-      amount: amountPaise,
-      status: "success",
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature,
     });
 
-    const walletCredit = Number(req.body?.walletCredit || 0);
-    if (Number.isFinite(walletCredit) && walletCredit > 0) {
-      user.walletBalance = Number(user.walletBalance || 0) + walletCredit;
-      await user.save();
+    if (String(subscription.userId) !== String(userId)) {
+      return res.status(403).json({ error: "Order does not belong to this user" });
     }
+
+    trackEvent({
+      userId,
+      type: "subscription_paid",
+      featureKey: subscription.planName,
+      metadata: {
+        orderId: subscription.orderId,
+        paymentId: razorpay_payment_id,
+        totalAmount: subscription.totalAmount,
+        plan: subscription.planName,
+        duration: subscription.duration,
+      },
+      req,
+    });
 
     return res.json({
       ok: true,
       verified: true,
       userId: String(user._id),
-      role: user.role,
       plan: user.plan,
       planActivatedAt: user.planActivatedAt,
       planExpiresAt: user.planExpiresAt,
-      planStartDate: user.planStartDate,
-      planEndDate: user.planEndDate,
-      walletBalance: user.walletBalance || 0,
-      paymentId: razorpay_payment_id,
+      subscription: {
+        id: String(subscription._id),
+        userType: subscription.userType,
+        planName: subscription.planName,
+        duration: subscription.duration,
+        selectedServices: subscription.selectedServices,
+        addons: subscription.addons,
+        totalAmount: subscription.totalAmount,
+        startDate: subscription.startDate,
+        expiryDate: subscription.expiryDate,
+        paymentStatus: subscription.paymentStatus,
+      },
     });
   } catch (error) {
-    if (String(error.message || "").startsWith("Invalid")) {
-      return res.status(400).json({ error: error.message });
-    }
     if (String(error.message || "").includes("not found")) {
       return res.status(404).json({ error: error.message });
     }

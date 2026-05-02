@@ -39,6 +39,25 @@ const userSchema = new mongoose.Schema(
     planExpiresAt: { type: Date },
     payments: { type: [paymentEntrySchema], default: [] },
     walletBalance: { type: Number, default: 0, min: 0 },
+
+    /** Profile fields surfaced on the admin intelligence dashboard. */
+    institution: { type: String, default: "", trim: true },
+    /** Type-specific institution metadata (kept flat for query-friendliness). */
+    degree: { type: String, default: "", trim: true },
+    yearOfStudy: { type: String, default: "", trim: true },
+    department: { type: String, default: "", trim: true },
+    researchDomain: { type: String, default: "", trim: true },
+    /** Captured from the subscription wizard (student | researcher | faculty | ...). */
+    userType: { type: String, default: "", trim: true },
+    purposeOfUsage: {
+      type: String,
+      enum: ["", "research", "teaching", "commercial", "learning", "other"],
+      default: "",
+    },
+
+    /** Activity counters for funnel + churn metrics. */
+    loginCount: { type: Number, default: 0, min: 0 },
+    lastActiveAt: { type: Date, default: null },
   },
   { timestamps: false }
 );

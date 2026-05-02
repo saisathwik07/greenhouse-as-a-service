@@ -38,6 +38,8 @@ export default defineConfig(({ mode }) => {
       rewrite: (path) => path.replace(/^\/flask-api/, ""),
     },
     "/api": { target: NODE_API, changeOrigin: true },
+    /** Static screenshots/attachments served by Express. */
+    "/uploads": { target: NODE_API, changeOrigin: true },
   };
 
   return {

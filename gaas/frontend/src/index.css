@@ -3,8 +3,43 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
   body {
     @apply bg-gaas-bg text-gaas-text font-sans m-0 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Typography scale per design spec — preserves existing classnames + colors. */
+  h1 {
+    font-size: clamp(28px, 2.4vw, 32px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: clamp(20px, 1.6vw, 22px);
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+  p,
+  li,
+  td,
+  th {
+    font-size: 14px;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: 14px;
   }
 
   ::-webkit-scrollbar {

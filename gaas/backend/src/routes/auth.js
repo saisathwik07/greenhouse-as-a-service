@@ -4,6 +4,7 @@ const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const { adminEmail, jwtSecret, googleClientId, signAccessToken } = require("../config/authConfig");
 const { expireUserPlanIfNeeded } = require("../services/planExpiryService");
+const { trackEvent, recordLogin } = require("../services/eventTracker");
 
 const router = express.Router();
 
@@ -38,6 +39,11 @@ router.post("/register", async (req, res) => {
     });
 
     const token = signAccessToken(user);
+    await Promise.all([
+      trackEvent({ userId: user._id, type: "signup", req, user }),
+      trackEvent({ userId: user._id, type: "login", req, user }),
+      recordLogin(user._id),
+    ]);
     const userOut = {
       id: user._id,
       name: user.name,
@@ -71,11 +77,22 @@ router.post("/login", async (req, res) => {
     }
 
     const ok = await bcrypt.compare(String(password), user.password);
-    if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+    if (!ok) {
+      await trackEvent({
+        type: "login_failed",
+        metadata: { email: normalizedEmail },
+        req,
+      });
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
     user.lastLoginAt = new Date();
     await user.save();
-    await expireUserPlanIfNeeded(user._id);
+    await Promise.all([
+      trackEvent({ userId: user._id, type: "login", req, user }),
+      recordLogin(user._id),
+      expireUserPlanIfNeeded(user._id),
+    ]);
     const fresh = await User.findById(user._id).select("-password").lean();
 
     const token = signAccessToken(fresh);
@@ -159,6 +176,7 @@ router.post("/google-login", async (req, res) => {
     const paidPlans = new Set(["pro", "premium", "standard"]);
 
     let user;
+    let isNewSignup = false;
     try {
       user = await User.findOneAndUpdate(
         { email },
@@ -180,6 +198,7 @@ router.post("/google-login", async (req, res) => {
           await User.updateOne({ _id: user._id }, { $set: { plan: "basic" } });
         }
       } else {
+        isNewSignup = true;
         user = await User.create({
           name,
           email,
@@ -195,7 +214,14 @@ router.post("/google-login", async (req, res) => {
       return res.status(500).json({ error: dbErr.message });
     }
 
-    await expireUserPlanIfNeeded(user._id);
+    await Promise.all([
+      isNewSignup
+        ? trackEvent({ userId: user._id, type: "signup", req, user })
+        : Promise.resolve(),
+      trackEvent({ userId: user._id, type: "login", req, user }),
+      recordLogin(user._id),
+      expireUserPlanIfNeeded(user._id),
+    ]);
     user = await User.findById(user._id).select("-password").lean();
 
     let jwtToken;

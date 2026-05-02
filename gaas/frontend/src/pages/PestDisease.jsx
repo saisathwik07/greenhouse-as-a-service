@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import UpgradeLock from "../components/UpgradeLock";
 import { useSubscription } from "../hooks/useSubscription";
+
+const VALID_MODES = ["prediction", "image"];
 
 const toInputNumber = (value) => (value === "" ? "" : Number(value));
 const ROBOFLOW_API_URL = "https://detect.roboflow.com/leaf-disease-f06v7/1?api_key=HfqAqCcq8uzY7qXFsAwB";
@@ -145,7 +148,16 @@ function predictDisease({ crop, stage, temperature, humidity }) {
 export default function PestDisease() {
   const { canAccess } = useSubscription();
   const allowed = canAccess("pestDisease");
-  const [mode, setMode] = useState("prediction");
+  const location = useLocation();
+  const initialMode = useMemo(() => {
+    const q = new URLSearchParams(location.search).get("mode");
+    return VALID_MODES.includes(q) ? q : "prediction";
+  }, [location.search]);
+  const [mode, setMode] = useState(initialMode);
+  /* Sync active tab when sidebar links navigate with a different `?mode=`. */
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const [form, setForm] = useState({
     crop: "Tomato",
     stage: "Vegetative",

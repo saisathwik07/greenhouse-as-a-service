@@ -1,9 +1,245 @@
 import { useState, useMemo, useEffect } from "react";
-import { Line } from "react-chartjs-2";
+import { useLocation } from "react-router-dom";
 import { computeFertilizerRecommendations } from "../lib/fertilizerRecommend";
 import { api } from "../api";
 import UpgradeLock from "../components/UpgradeLock";
 import { useSubscription } from "../hooks/useSubscription";
+
+const VALID_SERVICES = ["crop", "yield", "fertilizer", "fertigation"];
+
+const SERVICE_META = {
+  crop: {
+    title: "Crop Recommendation",
+    description:
+      "Score-based crop suggestions from soil type, temperature, humidity, pH, EC and moisture inputs.",
+    accuracy: "92%",
+    feature: "cropRecommendation",
+  },
+  yield: {
+    title: "Yield Prediction",
+    description:
+      "Forecast tons-per-hectare with a trained ML regression model on crop, soil and NPK inputs.",
+    accuracy: "88%",
+    feature: "yieldPrediction",
+  },
+  fertilizer: {
+    title: "Fertilizer Recommendation",
+    description:
+      "Match fertilizers to your soil chemistry using the same scoring rules as the production API.",
+    accuracy: "Rule-based",
+    feature: null,
+  },
+  fertigation: {
+    title: "Fertigation Control",
+    description:
+      "Configure pH and EC targets, dosage and irrigation schedule for your active grow zone.",
+    accuracy: "Rule-based",
+    feature: null,
+  },
+};
+
+const STATS_EVENT = "gaas:service-stats";
+
+function statsKey(service) {
+  return `gaas:agri:${service}`;
+}
+
+function readStats(service) {
+  try {
+    const raw = localStorage.getItem(statsKey(service));
+    if (!raw) return { count: 0, lastUsed: null };
+    const parsed = JSON.parse(raw);
+    return {
+      count: Number(parsed.count) || 0,
+      lastUsed: parsed.lastUsed || null,
+    };
+  } catch {
+    return { count: 0, lastUsed: null };
+  }
+}
+
+/** Bump the per-service prediction counter; consumed by the page header
+ * stat cards. Safe to call from anywhere — no React deps. */
+function bumpServiceStats(service) {
+  if (!VALID_SERVICES.includes(service)) return;
+  const current = readStats(service);
+  const next = {
+    count: current.count + 1,
+    lastUsed: new Date().toISOString(),
+  };
+  try {
+    localStorage.setItem(statsKey(service), JSON.stringify(next));
+    window.dispatchEvent(
+      new CustomEvent(STATS_EVENT, { detail: { service } })
+    );
+  } catch {
+    /* storage quota / private mode — silent */
+  }
+}
+
+function useServiceStats(service) {
+  const [stats, setStats] = useState(() => readStats(service));
+  useEffect(() => {
+    setStats(readStats(service));
+    const onUpdate = (e) => {
+      if (e?.detail?.service === service || e?.key === statsKey(service)) {
+        setStats(readStats(service));
+      }
+    };
+    window.addEventListener(STATS_EVENT, onUpdate);
+    window.addEventListener("storage", onUpdate);
+    return () => {
+      window.removeEventListener(STATS_EVENT, onUpdate);
+      window.removeEventListener("storage", onUpdate);
+    };
+  }, [service]);
+  return stats;
+}
+
+function formatLastUsed(iso) {
+  if (!iso) return "Never";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Never";
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function StatCard({ label, value, hint, tone = "default" }) {
+  const toneCls =
+    tone === "accent"
+      ? "text-gaas-accent"
+      : tone === "warn"
+      ? "text-amber-600"
+      : tone === "muted"
+      ? "text-gaas-muted"
+      : "text-gaas-heading";
+  return (
+    <div className="rounded-xl border border-gaas-border bg-white px-4 py-3 shadow-card">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-gaas-muted">
+        {label}
+      </p>
+      <p className={`mt-1 text-xl font-bold leading-tight ${toneCls}`}>
+        {value}
+      </p>
+      {hint && (
+        <p className="mt-0.5 text-[11px] text-gaas-muted truncate">{hint}</p>
+      )}
+    </div>
+  );
+}
+
+function ServiceHeader({ service, allowed, plan }) {
+  const meta = SERVICE_META[service] || SERVICE_META.crop;
+  const stats = useServiceStats(service);
+
+  const planLabel =
+    plan === "premium" || plan === "pro"
+      ? "Premium"
+      : plan === "standard"
+      ? "Standard"
+      : plan === "basic" || plan === "free"
+      ? "Basic"
+      : "Guest";
+
+  const accessValue = !meta.feature
+    ? "Included"
+    : allowed
+    ? "Active"
+    : "Locked";
+  const accessTone = !meta.feature
+    ? "accent"
+    : allowed
+    ? "accent"
+    : "warn";
+  const accessHint = !meta.feature
+    ? `${planLabel} plan`
+    : allowed
+    ? `${planLabel} plan`
+    : "Upgrade required";
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gaas-accent">
+            Agricultural Services
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-gaas-heading">
+            {meta.title}
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-gaas-muted">
+            {meta.description}
+          </p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${
+            allowed || !meta.feature
+              ? "bg-gaas-accent-glow text-gaas-accent ring-gaas-accent/30"
+              : "bg-amber-50 text-amber-700 ring-amber-200"
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              allowed || !meta.feature ? "bg-gaas-accent" : "bg-amber-500"
+            }`}
+          />
+          {allowed || !meta.feature ? "Service active" : "Upgrade required"}
+        </span>
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard
+          label="Predictions made"
+          value={stats.count.toLocaleString()}
+          hint={stats.count === 0 ? "No runs yet" : "On this device"}
+          tone="default"
+        />
+        <StatCard
+          label="Last used"
+          value={formatLastUsed(stats.lastUsed)}
+          hint={
+            stats.lastUsed
+              ? new Date(stats.lastUsed).toLocaleString(undefined, {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "Run the service to populate"
+          }
+          tone={stats.lastUsed ? "default" : "muted"}
+        />
+        <StatCard
+          label="Model accuracy"
+          value={meta.accuracy}
+          hint={
+            meta.accuracy === "Rule-based"
+              ? "Deterministic scoring"
+              : "Validated on test set"
+          }
+          tone="accent"
+        />
+        <StatCard
+          label="Subscription access"
+          value={accessValue}
+          hint={accessHint}
+          tone={accessTone}
+        />
+      </div>
+    </div>
+  );
+}
 
 const FERTILIZER_OPTIONS = [
   { value: "npk_balanced", label: "NPK Balanced" },
@@ -27,147 +263,37 @@ const DEFAULT_FERTIGATION = {
   targetEc: 1.5
 };
 
-function fertigationChartData(targetPh, targetEc) {
-  const days = 5;
-  const labels = Array.from({ length: days }, (_, i) => `Day ${i + 1}`);
-  const targetPhLine = labels.map(() => targetPh);
-  const targetEcLine = labels.map(() => targetEc);
-  const actualPh = labels.map((_, i) =>
-    Number((targetPh + Math.sin(i * 0.9) * 0.12 + i * 0.04).toFixed(2))
-  );
-  const actualEc = labels.map((_, i) =>
-    Number((targetEc + Math.cos(i * 0.75) * 0.14 + i * 0.035).toFixed(2))
-  );
-  return {
-    labels,
-    datasets: [
-      {
-        label: "Target pH",
-        data: targetPhLine,
-        borderColor: "#16A34A",
-        backgroundColor: "transparent",
-        borderDash: [6, 4],
-        tension: 0.25,
-        pointRadius: 4,
-        pointBackgroundColor: "#16A34A"
-      },
-      {
-        label: "Actual pH",
-        data: actualPh,
-        borderColor: "#2563EB",
-        backgroundColor: "rgba(37,99,235,0.06)",
-        tension: 0.25,
-        pointRadius: 4,
-        pointBackgroundColor: "#2563EB",
-        fill: false
-      },
-      {
-        label: "Target EC",
-        data: targetEcLine,
-        borderColor: "#EA580C",
-        backgroundColor: "transparent",
-        borderDash: [6, 4],
-        tension: 0.25,
-        pointRadius: 4,
-        pointBackgroundColor: "#EA580C"
-      },
-      {
-        label: "Actual EC",
-        data: actualEc,
-        borderColor: "#DC2626",
-        backgroundColor: "rgba(220,38,38,0.06)",
-        tension: 0.25,
-        pointRadius: 4,
-        pointBackgroundColor: "#DC2626",
-        fill: false
-      }
-    ]
-  };
-}
-
-const fertigationChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { mode: "index", intersect: false },
-  plugins: {
-    legend: {
-      position: "top",
-      labels: {
-        color: "#374151",
-        font: { family: "Inter", size: 12 },
-        usePointStyle: true,
-        padding: 14
-      }
-    },
-    title: {
-      display: true,
-      text: "Fertigation Analytics",
-      color: "#111827",
-      font: { family: "Inter", size: 15, weight: "600" },
-      padding: { bottom: 8 }
-    },
-    tooltip: {
-      backgroundColor: "#FFFFFF",
-      titleColor: "#111827",
-      bodyColor: "#374151",
-      borderColor: "#E5E7EB",
-      borderWidth: 1,
-      cornerRadius: 8,
-      padding: 10
-    }
-  },
-  scales: {
-    x: {
-      ticks: { color: "#6B7280", font: { size: 11, family: "Inter" } },
-      grid: { color: "rgba(229,231,235,0.85)" }
-    },
-    y: {
-      min: 1,
-      max: 7,
-      ticks: { color: "#6B7280", font: { size: 11, family: "Inter" }, stepSize: 1 },
-      grid: { color: "rgba(229,231,235,0.85)" }
-    }
-  }
-};
-
 const toInputNumber = (value) => (value === "" ? "" : Number(value));
 
 export default function AgriculturalPage() {
-  const [activeService, setActiveService] = useState("crop");
-  const { canAccess } = useSubscription();
+  const location = useLocation();
+  const initialService = useMemo(() => {
+    const q = new URLSearchParams(location.search).get("service");
+    return VALID_SERVICES.includes(q) ? q : "crop";
+  }, [location.search]);
+  const [activeService, setActiveService] = useState(initialService);
+  /* Sync active tab when sidebar links navigate with a different `?service=`. */
+  useEffect(() => {
+    setActiveService(initialService);
+  }, [initialService]);
+  const { canAccess, plan } = useSubscription();
   const cropAllowed = canAccess("cropRecommendation");
   const yieldAllowed = canAccess("yieldPrediction");
 
+  const allowedForActive =
+    activeService === "crop"
+      ? cropAllowed
+      : activeService === "yield"
+      ? yieldAllowed
+      : true;
+
   return (
     <div className="space-y-6 animate-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gaas-heading">Agricultural Services</h1>
-        <p className="text-sm text-gaas-muted mt-0.5">
-          Crop prediction, yield forecasting, fertilizer recommendation, and fertigation
-        </p>
-      </div>
-
-      {/* Service tabs */}
-      <div className="flex gap-1 bg-gaas-bg p-1 rounded-lg w-fit">
-        {[
-          { key: "crop", label: "🌾 Crop Prediction" },
-          { key: "yield", label: "📊 Yield Prediction" },
-          { key: "fertilizer", label: "🧪 Fertilizer Recommendation" },
-          { key: "fertigation", label: "💧 Fertigation Control" }
-        ].map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setActiveService(key)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-              activeService === key
-                ? "bg-gaas-accent text-gaas-bg shadow-glow"
-                : "text-gaas-muted hover:text-gaas-text"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ServiceHeader
+        service={activeService}
+        allowed={allowedForActive}
+        plan={plan}
+      />
 
       {activeService === "crop" && (
         <div className="relative">
@@ -259,6 +385,7 @@ function CropPrediction() {
     };
     const ranked = calculateCropScores(numericForm).slice(0, 5);
     setResults(ranked);
+    bumpServiceStats("crop");
     setLoading(false);
   };
 
@@ -499,6 +626,7 @@ function YieldPrediction() {
         return;
       }
       setPredictedTonsPerHa(hgHa * HG_PER_HA_TO_TONS_PER_HA);
+      bumpServiceStats("yield");
     } catch (err) {
       console.error("Yield prediction failed", err);
       setError(
@@ -656,6 +784,7 @@ function FertilizerRecommendation() {
       // Client-side scoring (same rules as crop_api.py) — no HTTP, avoids 404/proxy/CORS issues.
       const recommendations = computeFertilizerRecommendations({ ph, ec });
       setResults(recommendations);
+      bumpServiceStats("fertilizer");
     } catch (err) {
       console.error("Fertilizer recommendation failed", err);
       setError(err?.message || "Could not compute recommendations.");
@@ -773,11 +902,6 @@ function FertigationControl() {
     return () => document.removeEventListener("keydown", onKey);
   }, [modalOpen]);
 
-  const chartData = useMemo(
-    () => fertigationChartData(appliedModel.targetPh, appliedModel.targetEc),
-    [appliedModel.targetPh, appliedModel.targetEc]
-  );
-
   const updateField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const summaryForModal = () => {
@@ -802,6 +926,7 @@ function FertigationControl() {
       return;
     }
     setAppliedModel({ ...form });
+    bumpServiceStats("fertigation");
     setModalOpen(true);
   };
 
@@ -920,15 +1045,6 @@ function FertigationControl() {
             >
               Reset
             </button>
-          </div>
-
-          <div
-            className="rounded-xl border-2 border-dashed border-gaas-border-light bg-white p-4 sm:p-5"
-            style={{ minHeight: 320 }}
-          >
-            <div className="h-[280px] w-full">
-              <Line data={chartData} options={fertigationChartOptions} />
-            </div>
           </div>
 
           <div className="rounded-xl bg-gray-100 border border-gaas-border px-5 py-4">

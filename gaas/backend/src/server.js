@@ -22,6 +22,38 @@ const paymentRoutes = require("./routes/payment");
 const planRoutes = require("./routes/plans");
 const chatRoutes = require("./routes/chat");
 const ticketRoutes = require("./routes/tickets");
+const notificationRoutes = require("./routes/notifications");
+const { UPLOAD_ROOT } = require("./middleware/uploads");
+const { requireEntitlement } = require("./middleware/entitlement");
+const { startExpirySweeper } = require("./services/planExpiryService");
+const billingRoutes = require("./routes/billing");
+const userRoutes = require("./routes/user");
+const adminIntelligenceRoutes = require("./routes/adminIntelligence");
+const { trackEvent } = require("./services/eventTracker");
+const jwt = require("jsonwebtoken");
+const { jwtSecret } = require("./config/authConfig");
+
+/**
+ * Optional auth: decode JWT if present so we can attribute events. Never
+ * blocks the request — the dashboard download endpoints stay public.
+ */
+function softAuth(req, _res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = {
+        id: decoded.id || decoded.sub,
+        email: String(decoded.email || "").toLowerCase(),
+        role: String(decoded.role || "user").toLowerCase(),
+      };
+    } catch {
+      /* ignore */
+    }
+  }
+  next();
+}
 
 const app = express();
 const PORT = process.env.PORT || 5100;
@@ -32,11 +64,24 @@ app.use(express.json());
 /** Auth: Google login + JWT; Admin: user list (MongoDB) */
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminIntelligenceRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/billing", billingRoutes);
+app.use("/api/user", userRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+/** Serve uploaded screenshots (ticket attachments). */
+app.use(
+  "/uploads",
+  express.static(UPLOAD_ROOT, {
+    maxAge: "1d",
+    fallthrough: false,
+  })
+);
 
 // ========================
 // IN-MEMORY SENSOR DATA
@@ -212,7 +257,7 @@ app.get("/api/sensors/rows/:row/bags/:bag", (req, res) => {
 });
 
 // GET /api/sensors/export?range=24h|48h|72h
-app.get("/api/sensors/export", (req, res) => {
+app.get("/api/sensors/export", softAuth, (req, res) => {
   const rangeStr = req.query.range || "24h";
   const hours = parseInt(rangeStr) || 24;
   const cutoff = Date.now() - hours * 3600000;
@@ -225,13 +270,21 @@ app.get("/api/sensors/export", (req, res) => {
   );
   const csv = [header, ...csvRows].join("\n");
 
+  trackEvent({
+    userId: req.user?.id,
+    type: "download",
+    featureKey: "sensor_export",
+    metadata: { rangeHours: hours, rows: filtered.length, format: "csv" },
+    req,
+  });
+
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename=sensor_data_${hours}h.csv`);
   res.send(csv);
 });
 
 // Also keep old /download route for backwards compat
-app.get("/api/sensors/download", (req, res) => {
+app.get("/api/sensors/download", softAuth, (req, res) => {
   req.query.range = req.query.range || "24h";
   // forward to export handler
   const rangeStr = req.query.range;
@@ -244,6 +297,15 @@ app.get("/api/sensors/download", (req, res) => {
     [r.timestamp, r.row, r.bag, ...sensorKeys.map(k => r[k] ?? "")].join(",")
   );
   const csv = [header, ...csvRows].join("\n");
+
+  trackEvent({
+    userId: req.user?.id,
+    type: "download",
+    featureKey: "sensor_download",
+    metadata: { rangeHours: hours, rows: filtered.length, sensors: sensorKeys, format: "csv" },
+    req,
+  });
+
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=sensor_data.csv");
   res.send(csv);
@@ -264,7 +326,7 @@ const CROPS = [
 
 function inRange(v, [min, max]) { return v >= min && v <= max; }
 
-app.post("/api/crop/recommend", (req, res) => {
+app.post("/api/crop/recommend", requireEntitlement("cropRecommendation"), (req, res) => {
   const { soilType, soilMoisture, ec, ph, temperature, humidity } = req.body;
   const t = Number(temperature), h = Number(humidity), sm = Number(soilMoisture);
   const phVal = Number(ph), ecVal = Number(ec);
@@ -294,7 +356,7 @@ const FERTILIZERS = [
   { fertilizer: "Calcium Nitrate", description: "Prevents blossom end rot", baseDosage: 4, phRange: [5.5, 7.0], ecRange: [0.5, 2.0] }
 ];
 
-app.post("/api/fertilizer/recommend", (req, res) => {
+app.post("/api/fertilizer/recommend", requireEntitlement("fertigation"), (req, res) => {
   const phVal = Number(req.body.ph) || 6.5;
   const ecVal = Number(req.body.ec) || 1.5;
 
@@ -325,7 +387,7 @@ app.get("/api/yield/crops", async (req, res) => {
   }
 });
 
-app.post("/api/yield/predict", async (req, res) => {
+app.post("/api/yield/predict", requireEntitlement("yieldPrediction"), async (req, res) => {
   try {
     const r = await axios.post(`${FLASK_ML_URL}/api/yield/predict`, req.body, {
       headers: { "Content-Type": "application/json" },
@@ -378,7 +440,7 @@ app.get("/api/ai/clustering", (_req, res) => {
 // ========================
 // IMAGE-BASED DISEASE DETECTION
 // ========================
-app.post("/api/detect-disease", (req, res) => {
+app.post("/api/detect-disease", requireEntitlement("pestDisease"), (req, res) => {
   try {
     const imageBase64 = String(req.body?.imageBase64 || "");
     if (!imageBase64) return res.status(400).json({ error: "imageBase64 is required" });
@@ -478,7 +540,14 @@ app.get("/api/research/summary", (req, res) => {
   }
 });
 
-app.get("/api/research/export", (req, res) => {
+app.get("/api/research/export", softAuth, (req, res) => {
+  trackEvent({
+    userId: req.user?.id,
+    type: "download",
+    featureKey: "research_export",
+    metadata: { format: req.query.format || "csv", filters: req.query },
+    req,
+  });
   try {
     const format = String(req.query.format || "csv").toLowerCase();
     const filter = { ...req.query };
@@ -578,6 +647,7 @@ for (const row of ROWS) {
 
 connectDB()
   .then(() => {
+    startExpirySweeper();
     app.listen(PORT, () => {
       console.log(`✅ HTTP server listening (MongoDB ready) — http://localhost:${PORT}`);
       console.log(`   Health: http://localhost:${PORT}/api/health`);

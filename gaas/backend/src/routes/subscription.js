@@ -3,7 +3,10 @@ const User = require("../models/User");
 const Subscription = require("../models/Subscription");
 const PaymentTransaction = require("../models/PaymentTransaction");
 const { authenticate } = require("../middleware/authenticate");
-const { applySubscriptionUpgrade } = require("../services/subscriptionService");
+const {
+  applySubscriptionUpgrade,
+  getActiveSubscription,
+} = require("../services/subscriptionService");
 const { expireUserPlanIfNeeded } = require("../services/planExpiryService");
 
 const router = express.Router();
@@ -16,13 +19,18 @@ function accessRoleFromPlan(plan) {
   return "guest";
 }
 
-/* GET /api/subscription — logged-in user's plan details */
+/* GET /api/subscription — logged-in user's plan details + purchased entitlements */
 router.get("/", authenticate, async (req, res, next) => {
   try {
     await expireUserPlanIfNeeded(req.user.id);
-    const user = await User.findById(req.user.id)
-      .select("role plan planActivatedAt planExpiresAt planStartDate planEndDate walletBalance")
-      .lean();
+    const [user, activeSub] = await Promise.all([
+      User.findById(req.user.id)
+        .select(
+          "role plan planActivatedAt planExpiresAt planStartDate planEndDate walletBalance"
+        )
+        .lean(),
+      getActiveSubscription(req.user.id),
+    ]);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -35,6 +43,13 @@ router.get("/", authenticate, async (req, res, next) => {
       planExpiresAt: user.planExpiresAt || user.planEndDate || null,
       planStartDate: user.planStartDate || null,
       planEndDate: user.planEndDate || null,
+      // Purchased wizard selections (drives fine-grained feature gating).
+      userType: activeSub?.userType || null,
+      planName: activeSub?.planName || null,
+      duration: activeSub?.duration || null,
+      selectedServices: activeSub?.selectedServices || [],
+      addons: activeSub?.addons || [],
+      totalAmount: activeSub?.totalAmount || 0,
     });
   } catch (error) {
     next(error);

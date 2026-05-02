@@ -15,9 +15,12 @@ import AgriculturalPage from "./pages/AgriculturalPage";
 import IoTPage from "./pages/IoTPage";
 import AIPage from "./pages/AIPage";
 import SubscriptionPage from "./pages/SubscriptionPage";
+import BillingPage from "./pages/BillingPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import HomePage from "./pages/HomePage";
 import PestDisease from "./pages/PestDisease";
-import GreenhouseSimPage from "./pages/GreenhouseSimPage";
 import LiveDataPage from "./pages/LiveDataPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSupportPage from "./pages/AdminSupportPage";
@@ -104,14 +107,6 @@ export default function App() {
                 }
               />
               <Route
-                path="/greenhouse"
-                element={
-                  <NonGuestRoute>
-                    <GreenhouseSimPage />
-                  </NonGuestRoute>
-                }
-              />
-              <Route
                 path="/live"
                 element={
                   <NonGuestRoute>
@@ -160,10 +155,50 @@ export default function App() {
                 }
               />
               <Route
+                path="/billing"
+                element={
+                  <NonGuestRoute>
+                    <BillingPage />
+                  </NonGuestRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <NonGuestRoute>
+                    <BillingPage />
+                  </NonGuestRoute>
+                }
+              />
+              <Route
+                path="/payment/success"
+                element={
+                  <NonGuestRoute>
+                    <PaymentSuccess />
+                  </NonGuestRoute>
+                }
+              />
+              <Route
+                path="/payment/failure"
+                element={
+                  <NonGuestRoute>
+                    <PaymentFailure />
+                  </NonGuestRoute>
+                }
+              />
+              <Route
                 path="/admin"
                 element={
                   <AdminRoute>
                     <AdminDashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <AdminRoute>
+                    <AdminAnalytics />
                   </AdminRoute>
                 }
               />

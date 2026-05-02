@@ -2,6 +2,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import UserProfileMenu from "./UserProfileMenu";
+import NotificationBell from "./NotificationBell";
 
 /** OAuth Web Client ID — same origin must be allowed in Google Cloud Console. */
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -102,13 +103,16 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
             ) : null}
           </>
         ) : (
-          <UserProfileMenu
-            displayName={user.displayName}
-            email={user.email}
-            pictureUrl={user.picture}
-            isGuest={isGuest}
-            onLogout={logout}
-          />
+          <>
+            {!isGuest && <NotificationBell />}
+            <UserProfileMenu
+              displayName={user.displayName}
+              email={user.email}
+              pictureUrl={user.picture}
+              isGuest={isGuest}
+              onLogout={logout}
+            />
+          </>
         )}
       </div>
     </header>
