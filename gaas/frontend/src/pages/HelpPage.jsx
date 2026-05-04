@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   api,
-  API_SESSION_HELP,
   ensureAppJwtFromGoogleIdToken,
   getAuthToken,
+  getMissingAppJwtHelpText,
 } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import ScreenshotDropzone from "../components/support/ScreenshotDropzone";
@@ -56,7 +56,7 @@ export default function HelpPage() {
     try {
       await ensureAppJwtFromGoogleIdToken();
       if (!getAuthToken()) {
-        setError(`Sign in required. ${API_SESSION_HELP}`);
+        setError(`Sign in required. ${getMissingAppJwtHelpText()}`);
         setSubmitting(false);
         return;
       }

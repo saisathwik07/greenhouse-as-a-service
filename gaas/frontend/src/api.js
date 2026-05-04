@@ -224,3 +224,22 @@ api.interceptors.response.use(
 /** User-facing hint when API session cannot be established */
 export const API_SESSION_HELP =
   "Your Google sign-in session for the server may have expired (tokens last ~1 hour). Use Sign out, then sign in with Google again. If it keeps failing, check that the backend is running (port 5100) and Vite proxies /api to it.";
+
+/**
+ * Explains missing app JWT: Google UI can look “logged in” while the Express-issued
+ * Bearer token (localStorage `token`) is absent — often backend OAuth misconfig or
+ * expired Google ID token.
+ */
+export function getMissingAppJwtHelpText() {
+  if (typeof localStorage === "undefined") return API_SESSION_HELP;
+  const googleId = localStorage.getItem(GOOGLE_ID_TOKEN_STORAGE_KEY);
+  if (!googleId) {
+    return `No server login token and no saved Google credential to refresh from. ${API_SESSION_HELP}`;
+  }
+  return (
+    "The server could not issue an API token from your saved Google credential. " +
+    "Typical causes: (1) backend `.env` has an empty or wrong GOOGLE_CLIENT_ID — it must be the same Web Client ID as `VITE_GOOGLE_CLIENT_ID` on the frontend; " +
+    "(2) the Google credential expired (~1 hour). Sign out, then sign in with Google again. " +
+    "Confirm the backend is on port 5100 and Vite proxies `/api` to it."
+  );
+}

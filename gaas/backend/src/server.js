@@ -1,4 +1,7 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+  path: path.resolve(__dirname, "..", ".env"),
+});
 
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
@@ -8,6 +11,13 @@ if (process.env.MONGO_URI) {
   console.log("[env] MONGO_URI loaded; cluster host:", m ? m[1] : "(could not parse)");
 } else {
   console.warn("[env] MONGO_URI not set — using db.js fallback (localhost)");
+}
+
+if (!process.env.GOOGLE_CLIENT_ID?.trim()) {
+  console.warn(
+    "[env] GOOGLE_CLIENT_ID empty — /.env resolved from:",
+    path.resolve(__dirname, "..", ".env")
+  );
 }
 
 const axios = require("axios");

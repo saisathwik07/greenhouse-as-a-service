@@ -20,9 +20,9 @@ import {
 } from "recharts";
 import {
   api,
-  API_SESSION_HELP,
   ensureAppJwtFromGoogleIdToken,
   getAuthToken,
+  getMissingAppJwtHelpText,
 } from "../api";
 import ActivityFeed from "../components/admin/ActivityFeed";
 import UserDrawer from "../components/admin/UserDrawer";
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
         const hasToken = await ensureAppJwtFromGoogleIdToken();
         if (!hasToken && !getAuthToken()) {
           if (!active) return;
-          setError(`Authentication required. ${API_SESSION_HELP}`);
+          setError(`Authentication required. ${getMissingAppJwtHelpText()}`);
           setLoading(false);
           return;
         }

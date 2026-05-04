@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -16,10 +17,16 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
   const { user, isPro, isAdmin, isGuest, loginWithGoogle, logout } = useAuth();
   const homePath = user && !isGuest ? "/home" : "/";
   const navigate = useNavigate();
+  const [googleAuthError, setGoogleAuthError] = useState("");
 
   const handleGoogleSuccess = async (credentialResponse) => {
+    setGoogleAuthError("");
     const result = await loginWithGoogle(credentialResponse);
-    if (result?.user && !result?.error) {
+    if (result?.error) {
+      setGoogleAuthError(result.error);
+      return;
+    }
+    if (result?.user) {
       navigate("/", { replace: true });
     }
   };
@@ -79,16 +86,23 @@ export default function Navbar({ authFormMode = "login", onAuthFormModeChange })
 
             {/* Google — replaces “login” slot once user signs in elsewhere; here it’s the OAuth entry */}
             {googleClientId ? (
-              <div className="ml-1 flex items-center [&>div]:leading-none">
+              <div className="ml-1 flex flex-col items-end gap-1 [&>div]:leading-none">
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
-                  onError={() => {}}
+                  onError={() =>
+                    setGoogleAuthError("Google sign-in was cancelled or failed in the popup.")
+                  }
                   useOneTap={false}
                   theme="outline"
                   size="medium"
                   text="continue_with"
                   shape="pill"
                 />
+                {googleAuthError ? (
+                  <p className="max-w-[min(100vw-2rem,20rem)] text-right text-xs text-red-600">
+                    {googleAuthError}
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </>

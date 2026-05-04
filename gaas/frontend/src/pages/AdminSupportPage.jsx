@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   api,
-  API_SESSION_HELP,
   ensureAppJwtFromGoogleIdToken,
   getAuthToken,
+  getMissingAppJwtHelpText,
 } from "../api";
 import {
   PriorityBadge,
@@ -64,7 +64,7 @@ export default function AdminSupportPage() {
     try {
       await ensureAppJwtFromGoogleIdToken();
       if (!getAuthToken()) {
-        setError(`Authentication required. ${API_SESSION_HELP}`);
+        setError(`Authentication required. ${getMissingAppJwtHelpText()}`);
         setLoading(false);
         return;
       }

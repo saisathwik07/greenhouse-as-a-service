@@ -8,7 +8,7 @@ import { useSensors, useRows, useBags } from "../hooks/useSensors";
 import { useSubscription } from "../hooks/useSubscription";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { api, API_SESSION_HELP, ensureAppJwtFromGoogleIdToken, getAuthToken } from "../api";
+import { api, ensureAppJwtFromGoogleIdToken, getAuthToken, getMissingAppJwtHelpText } from "../api";
 import { formatPlanDisplayName, isPaidPremiumPlan } from "../lib/planDisplay";
 
 export default function DashboardPage() {
@@ -37,7 +37,7 @@ export default function DashboardPage() {
         await ensureAppJwtFromGoogleIdToken();
         if (!getAuthToken()) {
           if (!active) return;
-          setHistoryError(`Could not load purchase history — no valid API token. ${API_SESSION_HELP}`);
+          setHistoryError(`Could not load purchase history — no valid API token. ${getMissingAppJwtHelpText()}`);
           setHistoryLoading(false);
           return;
         }

@@ -4,6 +4,7 @@ import {
   api,
   clearAuthSessionAndTokens,
   ensureAppJwtFromGoogleIdToken,
+  getAuthToken,
   loadSessionUserAndSyncJwt,
   storeAuthToken,
 } from "../api";
@@ -29,13 +30,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => loadSessionUserAndSyncJwt());
   const [loading, setLoading] = useState(true);
 
-  // Finish auth bootstrap: exchange Google id token for app JWT before showing protected routes
+  // Finish auth bootstrap: exchange Google id token for app JWT; drop stale “Google” sessions with no server token
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        if (user?.provider === "google") {
+        const session = loadSessionUserAndSyncJwt();
+        if (session?.provider === "google") {
           await ensureAppJwtFromGoogleIdToken();
+          if (!cancelled && !getAuthToken()) {
+            clearAuthSessionAndTokens();
+            saveSession(null);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -113,8 +119,8 @@ export function AuthProvider({ children }) {
   };
 
   /**
-   * Google Sign-In: decode JWT locally, persist session, sync user to MongoDB via Express,
-   * and store app JWT for /api/admin/* calls.
+   * Google Sign-In: exchange Google ID token with Express for an app JWT, then persist session.
+   * Session is only saved after the server returns a token so the UI cannot show “logged in” without API auth.
    */
   const loginWithGoogle = async (credentialResponse) => {
     const token = credentialResponse?.credential;
@@ -127,46 +133,46 @@ export function AuthProvider({ children }) {
     }
     if (!payload?.email) return { error: "Could not read your Google profile." };
 
-    const email = String(payload.email);
-    const displayName = payload.name || email.split("@")[0];
-    const isAdmin = isAdminUser({ email });
-    const sessionUser = {
-      uid: payload.sub ? `google:${payload.sub}` : "google-" + Date.now(),
-      email,
-      displayName,
-      role: isAdmin ? "admin" : "user",
-      plan: isAdmin ? "pro" : "basic",
-      provider: "google",
-      picture: payload.picture || null,
-    };
-    saveSession(sessionUser);
     localStorage.setItem(GOOGLE_ID_TOKEN_KEY, token);
 
     try {
       const { data } = await api.post("/auth/google-login", { idToken: token });
-      if (data?.token) {
-        const mergedUser = {
-          ...sessionUser,
-          id: data?.user?.id,
-          uid: data?.user?.id || sessionUser.uid,
-          role: data?.user?.role || sessionUser.role,
-          plan: data?.user?.plan || sessionUser.plan,
-          planActivatedAt: data?.user?.planActivatedAt || null,
-          planExpiresAt: data?.user?.planExpiresAt || null,
-        };
-        storeAuthToken(data.token);
-        saveSession({ ...mergedUser, appJwt: data.token });
-        return { user: { ...mergedUser, appJwt: data.token } };
+      if (!data?.token) {
+        try {
+          localStorage.removeItem(GOOGLE_ID_TOKEN_KEY);
+        } catch {
+          /* ignore */
+        }
+        return { error: data?.error || "Server did not return a login token." };
       }
-      return {
-        user: sessionUser,
-        apiError: "Server did not return a token",
+
+      const email = String(payload.email);
+      const displayName = payload.name || email.split("@")[0];
+      const mergedUser = {
+        uid: data?.user?.id || (payload.sub ? `google:${payload.sub}` : `google-${Date.now()}`),
+        id: data?.user?.id,
+        email: data?.user?.email || email,
+        displayName: data?.user?.name || displayName,
+        role: data?.user?.role || "user",
+        plan: data?.user?.plan || "basic",
+        provider: "google",
+        picture: data?.user?.picture || payload.picture || null,
+        planActivatedAt: data?.user?.planActivatedAt || null,
+        planExpiresAt: data?.user?.planExpiresAt || null,
       };
+      storeAuthToken(data.token);
+      saveSession({ ...mergedUser, appJwt: data.token });
+      return { user: { ...mergedUser, appJwt: data.token } };
     } catch (err) {
-      const apiError =
-        err.response?.data?.error || err.message || "google-login request failed";
+      try {
+        localStorage.removeItem(GOOGLE_ID_TOKEN_KEY);
+      } catch {
+        /* ignore */
+      }
+      const msg =
+        err.response?.data?.error || err.message || "Google sign-in could not reach the server.";
       console.error("[auth] google-login sync failed:", err?.response?.data || err.message);
-      return { user: sessionUser, apiError };
+      return { error: msg };
     }
   };
 
