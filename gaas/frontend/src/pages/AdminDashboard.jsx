@@ -25,6 +25,7 @@ import {
   getMissingAppJwtHelpText,
 } from "../api";
 import ActivityFeed from "../components/admin/ActivityFeed";
+import GuestAccessPanel from "../components/admin/GuestAccessPanel";
 import UserDrawer from "../components/admin/UserDrawer";
 import { useAuth } from "../hooks/useAuth";
 
@@ -33,6 +34,7 @@ const TABS = [
   { id: "users", label: "Users" },
   { id: "analytics", label: "Analytics" },
   { id: "churn", label: "Churn & Retention" },
+  { id: "guest-access", label: "Guest Access" },
 ];
 
 const PLAN_COLORS = ["#16A34A", "#6366F1", "#F59E0B", "#0EA5E9"];
@@ -143,7 +145,13 @@ function FunnelView({ funnel }) {
   );
 }
 
-const VALID_TABS = new Set(["overview", "users", "analytics", "churn"]);
+const VALID_TABS = new Set([
+  "overview",
+  "users",
+  "analytics",
+  "churn",
+  "guest-access",
+]);
 
 export default function AdminDashboard() {
   const { user: currentAdmin } = useAuth();
@@ -765,6 +773,18 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {tab === "guest-access" && (
+            <motion.div
+              key="guest-access"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <GuestAccessPanel />
             </motion.div>
           )}
         </AnimatePresence>

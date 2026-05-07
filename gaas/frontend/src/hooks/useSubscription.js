@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, ensureAppJwtFromGoogleIdToken } from "../api";
 import { useAuth } from "./useAuth";
+import { useGuestAccess } from "./useGuestAccess";
 
 const DEFAULT_SUBSCRIPTION = {
   role: "guest",
@@ -50,6 +51,7 @@ const FEATURE_TO_ITEM = {
 
 export function useSubscription() {
   const { user, isAdmin } = useAuth();
+  const { isGuestFeatureUnlocked, loading: guestAccessLoading } = useGuestAccess();
   const [subscription, setSubscription] = useState(DEFAULT_SUBSCRIPTION);
   const [loading, setLoading] = useState(true);
 
@@ -99,6 +101,7 @@ export function useSubscription() {
   const canAccess = useCallback(
     (featureName) => {
       if (isAdmin || user?.role === "admin") return true;
+      if (user?.role === "guest") return isGuestFeatureUnlocked(featureName);
 
       const owned = new Set([
         ...(subscription.selectedServices || []),
@@ -114,12 +117,12 @@ export function useSubscription() {
       const role = subscription?.role || "guest";
       return allowedRoles.includes(role);
     },
-    [subscription, isAdmin, user?.role]
+    [subscription, isAdmin, user?.role, isGuestFeatureUnlocked]
   );
 
   const value = useMemo(
     () => ({
-      loading,
+      loading: loading || (user?.role === "guest" && guestAccessLoading),
       plan: subscription.plan,
       role: subscription.role,
       planExpiresAt: subscription.planExpiresAt,
@@ -131,7 +134,7 @@ export function useSubscription() {
       canAccess,
       refreshSubscription,
     }),
-    [loading, subscription, canAccess, refreshSubscription]
+    [loading, guestAccessLoading, subscription, canAccess, refreshSubscription, user?.role]
   );
 
   return value;

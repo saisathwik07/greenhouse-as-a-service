@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
+import {
+  GUEST_FEATURE_LOCKED_TITLE,
+  getGuestFeatureLabel,
+  useGuestAccess,
+} from "../hooks/useGuestAccess";
 import { useSubscription } from "../hooks/useSubscription";
 
 /* -------------------------------------------------------------------------- */
@@ -94,14 +99,14 @@ const GROUPS = [
     label: "Services",
     icon: Icon.services,
     items: [
-      { to: "/data", label: "Data as a Service" },
-      { to: "/agricultural?service=crop", label: "Crop Recommendation" },
-      { to: "/agricultural?service=yield", label: "Yield Prediction" },
-      { to: "/pest-disease?mode=prediction", label: "Pest Detection" },
-      { to: "/pest-disease?mode=image", label: "Image Disease Detection" },
-      { to: "/agricultural?service=fertigation", label: "Fertigation" },
-      { to: "/iot", label: "Irrigation" },
-      { to: "/ai", label: "AI Analytics" },
+      { to: "/data", label: "Data as a Service", featureName: "liveData" },
+      { to: "/agricultural?service=crop", label: "Crop Recommendation", featureName: "cropRecommendation" },
+      { to: "/agricultural?service=yield", label: "Yield Prediction", featureName: "yieldPrediction" },
+      { to: "/pest-disease?mode=prediction", label: "Pest Detection", featureName: "pestDisease" },
+      { to: "/pest-disease?mode=image", label: "Image Disease Detection", featureName: "pestDisease" },
+      { to: "/agricultural?service=fertigation", label: "Fertigation", featureName: "fertigation" },
+      { to: "/iot", label: "Irrigation", featureName: ["liveData", "mqtt", "irrigation"] },
+      { to: "/ai", label: "AI Analytics", featureName: "aiAnalytics" },
     ],
   },
   {
@@ -130,6 +135,7 @@ const GROUPS = [
     adminOnly: true,
     items: [
       { to: "/admin", label: "User Intelligence" },
+      { to: "/admin?tab=guest-access", label: "Guest Access" },
       { to: "/admin/analytics", label: "Revenue Analytics" },
       { to: "/admin/analytics?view=reports", label: "Reports" },
       { to: "/admin/support", label: "Ticket Management" },
@@ -156,26 +162,45 @@ function isActive(itemTo, loc, exact = false) {
   return true;
 }
 
-const GUEST_LOCK_HINT = "Sign in to unlock — guests can only use the Dashboard.";
+const GUEST_LOCK_HINT = "Log in, sign up, or upgrade to unlock this feature.";
+
+function guestCanUseItem(item, isGuest, isGuestFeatureUnlocked) {
+  if (!isGuest) return true;
+  if (item.guestOk) return true;
+  /* Plans, Billing, Profile, etc. — not tied to registry keys; sidebar does not imply “lock all guests”. */
+  if (!item.featureName) return true;
+  return isGuestFeatureUnlocked(item.featureName);
+}
+
+function featureForItem(item) {
+  return Array.isArray(item.featureName) ? item.featureName[0] : item.featureName;
+}
 
 /* -------------------------------------------------------------------------- */
 /*  Group + leaf row components                                               */
 /* -------------------------------------------------------------------------- */
 
-function LeafRow({ item, isGuest, location }) {
-  const guestLocked = isGuest && !item.guestOk;
+function LeafRow({ item, isGuest, location, isGuestFeatureUnlocked, openGuestAccessModal }) {
+  const guestLocked = !guestCanUseItem(item, isGuest, isGuestFeatureUnlocked);
   const active = isActive(item.to, location);
 
   if (guestLocked) {
     return (
-      <div
-        className="group/row mt-0.5 flex cursor-not-allowed select-none items-center gap-2.5 rounded-lg px-3 py-2 pl-10 text-[13px] font-medium text-gray-400"
+      <button
+        type="button"
+        onClick={() =>
+          openGuestAccessModal({
+            featureName: featureForItem(item),
+            title: GUEST_FEATURE_LOCKED_TITLE,
+            message: `${getGuestFeatureLabel(item.featureName)} is unavailable for guests with the current settings.`,
+          })
+        }
+        className="group/row mt-0.5 flex w-full select-none items-center gap-2.5 rounded-lg px-3 py-2 pl-10 text-left text-[13px] font-medium text-gray-400 transition hover:bg-amber-50 hover:text-amber-700"
         title={GUEST_LOCK_HINT}
-        role="presentation"
       >
         <Icon.lock className="h-3.5 w-3.5 text-gray-400" />
         <span className="flex-1 truncate">{item.label}</span>
-      </div>
+      </button>
     );
   }
 
@@ -202,7 +227,15 @@ function LeafRow({ item, isGuest, location }) {
   );
 }
 
-function Group({ group, location, isGuest, openSet, setOpenSet }) {
+function Group({
+  group,
+  location,
+  isGuest,
+  openSet,
+  setOpenSet,
+  isGuestFeatureUnlocked,
+  openGuestAccessModal,
+}) {
   const open = openSet.has(group.id);
   const childActive = useMemo(
     () => group.items.some((it) => isActive(it.to, location)),
@@ -269,7 +302,14 @@ function Group({ group, location, isGuest, openSet, setOpenSet }) {
           >
             <div className="pb-1 pt-0.5">
               {group.items.map((item) => (
-                <LeafRow key={item.to} item={item} isGuest={isGuest} location={location} />
+                <LeafRow
+                  key={item.to}
+                  item={item}
+                  isGuest={isGuest}
+                  location={location}
+                  isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+                  openGuestAccessModal={openGuestAccessModal}
+                />
               ))}
             </div>
           </motion.div>
@@ -279,22 +319,29 @@ function Group({ group, location, isGuest, openSet, setOpenSet }) {
   );
 }
 
-function TopLink({ item, isGuest, location }) {
-  const guestLocked = isGuest && !item.guestOk;
+function TopLink({ item, isGuest, location, isGuestFeatureUnlocked, openGuestAccessModal }) {
+  const guestLocked = !guestCanUseItem(item, isGuest, isGuestFeatureUnlocked);
   const active = isActive(item.to, location, item.end);
   const ItemIcon = item.icon;
 
   if (guestLocked) {
     return (
-      <div
-        className="group/row relative mx-1 flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-gray-400"
+      <button
+        type="button"
+        onClick={() =>
+          openGuestAccessModal({
+            featureName: featureForItem(item),
+            title: GUEST_FEATURE_LOCKED_TITLE,
+            message: `${getGuestFeatureLabel(item.featureName)} is unavailable for guests with the current settings.`,
+          })
+        }
+        className="group/row relative mx-1 flex w-[calc(100%-0.5rem)] select-none items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13.5px] font-semibold text-gray-400 transition hover:bg-amber-50 hover:text-amber-700"
         title={GUEST_LOCK_HINT}
-        role="presentation"
       >
         <ItemIcon className="h-[18px] w-[18px] shrink-0 text-gray-300" />
         <span className="flex-1 truncate">{item.label}</span>
         <Icon.lock className="h-3.5 w-3.5 text-gray-300" />
-      </div>
+      </button>
     );
   }
 
@@ -339,6 +386,7 @@ function SectionLabel({ children }) {
 
 export default function Sidebar() {
   const { user, isAdmin, isGuest } = useAuth();
+  const { isGuestFeatureUnlocked, openGuestAccessModal } = useGuestAccess();
   const { plan, planExpiresAt } = useSubscription();
   const location = useLocation();
 
@@ -414,7 +462,13 @@ export default function Sidebar() {
 
       <nav className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-2">
         <div className="space-y-0.5">
-          <TopLink item={ITEMS.dashboard} isGuest={isGuest} location={location} />
+          <TopLink
+            item={ITEMS.dashboard}
+            isGuest={isGuest}
+            location={location}
+            isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+            openGuestAccessModal={openGuestAccessModal}
+          />
         </div>
 
         <SectionLabel>Workspace</SectionLabel>
@@ -429,6 +483,8 @@ export default function Sidebar() {
                 isGuest={isGuest}
                 openSet={openSet}
                 setOpenSet={setOpenSet}
+                isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+                openGuestAccessModal={openGuestAccessModal}
               />
             ))}
         </div>
@@ -445,9 +501,17 @@ export default function Sidebar() {
                 isGuest={isGuest}
                 openSet={openSet}
                 setOpenSet={setOpenSet}
+                isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+                openGuestAccessModal={openGuestAccessModal}
               />
             ))}
-          <TopLink item={ITEMS.profile} isGuest={isGuest} location={location} />
+          <TopLink
+            item={ITEMS.profile}
+            isGuest={isGuest}
+            location={location}
+            isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+            openGuestAccessModal={openGuestAccessModal}
+          />
         </div>
 
         {isAdmin && (
@@ -464,6 +528,8 @@ export default function Sidebar() {
                     isGuest={isGuest}
                     openSet={openSet}
                     setOpenSet={setOpenSet}
+                    isGuestFeatureUnlocked={isGuestFeatureUnlocked}
+                    openGuestAccessModal={openGuestAccessModal}
                   />
                 ))}
             </div>

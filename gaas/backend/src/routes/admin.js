@@ -6,6 +6,11 @@ const { authenticate } = require("../middleware/authenticate");
 const { requireAdminRole } = require("../middleware/admin");
 const { listUsers, updateUserPlan } = require("../controllers/adminController");
 const {
+  listGuestAccessSettings,
+  updateGuestFeatureLock,
+  updateGuestGlobalUnlock,
+} = require("../services/guestAccessService");
+const {
   PLAN_BY_ID,
   USER_TYPE_BY_ID,
 } = require("../config/pricingConfig");
@@ -14,6 +19,51 @@ const router = express.Router();
 
 router.get("/users", authenticate, requireAdminRole, listUsers);
 router.put("/update-plan/:userId", authenticate, requireAdminRole, updateUserPlan);
+
+router.get("/guest-access", authenticate, requireAdminRole, async (_req, res, next) => {
+  try {
+    const settings = await listGuestAccessSettings();
+    return res.json(settings);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put("/guest-access/global", authenticate, requireAdminRole, async (req, res, next) => {
+  try {
+    const settings = await updateGuestGlobalUnlock({
+      guestGlobalUnlock: req.body?.guestGlobalUnlock,
+      updatedBy: req.user?.id,
+    });
+    return res.json({ ok: true, ...settings });
+  } catch (err) {
+    if (err.statusCode === 400) {
+      return res.status(400).json({ error: err.message });
+    }
+    return next(err);
+  }
+});
+
+router.put(
+  "/guest-access/feature/:featureName",
+  authenticate,
+  requireAdminRole,
+  async (req, res, next) => {
+    try {
+      const setting = await updateGuestFeatureLock({
+        featureName: req.params.featureName,
+        isLocked: req.body?.isLocked,
+        updatedBy: req.user?.id,
+      });
+      return res.json({ ok: true, setting });
+    } catch (err) {
+      if (err.statusCode === 400) {
+        return res.status(400).json({ error: err.message });
+      }
+      return next(err);
+    }
+  }
+);
 
 router.get("/payments", authenticate, requireAdminRole, async (_req, res) => {
   try {

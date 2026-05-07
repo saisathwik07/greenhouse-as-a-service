@@ -183,8 +183,8 @@ export default function LoginPage({ mode: controlledMode, onModeChange } = {}) {
           </button>
 
           <p className="mt-4 text-center text-[11px] text-gaas-muted">
-            Guest users get Basic plan access. Sign up for full features. Use Google in the header
-            to sign in with your account.
+            Guest users can open the dashboard and any features currently enabled by the admin.
+            Sign up or log in to upgrade for full access.
           </p>
         </div>
       </div>

@@ -91,7 +91,7 @@ export default function App() {
               <Route
                 path="/home"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Home">
                     <HomePage />
                   </NonGuestRoute>
                 }
@@ -99,7 +99,7 @@ export default function App() {
               <Route
                 path="/data"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName="liveData" title="Data">
                     <DataPage />
                   </NonGuestRoute>
                 }
@@ -107,7 +107,10 @@ export default function App() {
               <Route
                 path="/agricultural"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute
+                    featureName={["cropRecommendation", "yieldPrediction", "fertigation"]}
+                    title="Agricultural Services"
+                  >
                     <AgriculturalPage />
                   </NonGuestRoute>
                 }
@@ -115,7 +118,10 @@ export default function App() {
               <Route
                 path="/agriculture"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute
+                    featureName={["cropRecommendation", "yieldPrediction", "fertigation"]}
+                    title="Agricultural Services"
+                  >
                     <AgriculturalPage />
                   </NonGuestRoute>
                 }
@@ -123,7 +129,7 @@ export default function App() {
               <Route
                 path="/iot"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName={["liveData", "mqtt", "irrigation"]} title="IoT Monitoring">
                     <IoTMonitoringService />
                   </NonGuestRoute>
                 }
@@ -133,7 +139,7 @@ export default function App() {
               <Route
                 path="/live"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName={["liveData", "mqtt", "irrigation"]} title="IoT Monitoring">
                     <IoTMonitoringService />
                   </NonGuestRoute>
                 }
@@ -141,7 +147,7 @@ export default function App() {
               <Route
                 path="/mqtt"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName={["liveData", "mqtt", "irrigation"]} title="IoT Monitoring">
                     <IoTMonitoringService />
                   </NonGuestRoute>
                 }
@@ -149,7 +155,7 @@ export default function App() {
               <Route
                 path="/ai"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName="aiAnalytics" title="AI Analytics">
                     <AIPage />
                   </NonGuestRoute>
                 }
@@ -157,7 +163,7 @@ export default function App() {
               <Route
                 path="/pest-disease"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute featureName="pestDisease" title="Pest & Disease">
                     <PestDisease />
                   </NonGuestRoute>
                 }
@@ -165,7 +171,7 @@ export default function App() {
               <Route
                 path="/subscription"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Subscription">
                     <SubscriptionPage />
                   </NonGuestRoute>
                 }
@@ -173,7 +179,7 @@ export default function App() {
               <Route
                 path="/pro"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Subscription">
                     <SubscriptionPage />
                   </NonGuestRoute>
                 }
@@ -181,7 +187,7 @@ export default function App() {
               <Route
                 path="/billing"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Billing">
                     <BillingPage />
                   </NonGuestRoute>
                 }
@@ -189,7 +195,7 @@ export default function App() {
               <Route
                 path="/profile"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Profile">
                     <BillingPage />
                   </NonGuestRoute>
                 }
@@ -197,7 +203,7 @@ export default function App() {
               <Route
                 path="/payment/success"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Payment">
                     <PaymentSuccess />
                   </NonGuestRoute>
                 }
@@ -205,7 +211,7 @@ export default function App() {
               <Route
                 path="/payment/failure"
                 element={
-                  <NonGuestRoute>
+                  <NonGuestRoute title="Payment">
                     <PaymentFailure />
                   </NonGuestRoute>
                 }

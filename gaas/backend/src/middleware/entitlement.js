@@ -4,6 +4,7 @@ const {
   getActiveSubscription,
 } = require("../services/subscriptionService");
 const { trackEvent, touchUserActivity } = require("../services/eventTracker");
+const { getGuestFeatureAccess } = require("../services/guestAccessService");
 
 /**
  * Maps a coarse feature key to the wizard service/add-on ids that grant it.
@@ -24,22 +25,68 @@ const FEATURE_TO_ITEM = {
 /** Legacy plan tiers that still grant access (used until users migrate). */
 const LEGACY_PLAN_BYPASS = new Set(["pro", "premium", "standard"]);
 
+function hasBearerToken(req) {
+  const header = req.headers.authorization || "";
+  return header.startsWith("Bearer ") && header.slice(7).trim().length > 0;
+}
+
 /**
  * `requireEntitlement(featureKey)` => Express middleware. Allows the request
  * iff:
- *   - the user is authenticated, AND
- *   - the user is an admin, OR
+ *   - the request is an unlocked guest request, OR
+ *   - the user is authenticated, AND the user is an admin, OR
  *   - the active Subscription contains a service/add-on matching `featureKey`,
  *     OR
  *   - the user's legacy `plan` field is "pro" / "premium" / "standard".
  *
- * Adds `req.entitlements = { services, addons, plan }` for downstream handlers.
+ * Adds `req.entitlements = { guest, services, addons, plan }` for downstream handlers.
  */
 function requireEntitlement(featureKey) {
   return [
-    authenticate,
+    async (req, res, next) => {
+      if (hasBearerToken(req)) {
+        return authenticate(req, res, next);
+      }
+
+      try {
+        const guestAccess = await getGuestFeatureAccess(featureKey);
+        if (!guestAccess.allowed) {
+          return res.status(403).json({
+            error: "Feature is locked for guest users.",
+            code: "GUEST_FEATURE_LOCKED",
+            feature: featureKey,
+            guestGlobalUnlock: guestAccess.guestGlobalUnlock,
+            isLocked: guestAccess.isLocked,
+          });
+        }
+
+        req.entitlements = {
+          guest: true,
+          admin: false,
+          services: [],
+          addons: [],
+          plan: null,
+        };
+        await trackEvent({
+          type: "feature_used",
+          featureKey,
+          metadata: {
+            guest: true,
+            guestGlobalUnlock: guestAccess.guestGlobalUnlock,
+          },
+          req,
+        });
+        return next();
+      } catch (err) {
+        return next(err);
+      }
+    },
     async (req, res, next) => {
       try {
+        if (req.entitlements?.guest) {
+          return next();
+        }
+
         const userId = req.user?.id;
         if (!userId) {
           return res.status(401).json({ error: "Authentication required" });

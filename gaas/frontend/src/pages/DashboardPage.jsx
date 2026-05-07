@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <h2 className="text-sm font-bold text-gaas-heading uppercase tracking-wider mb-3">Subscription</h2>
         {isGuest ? (
           <p className="text-sm text-gaas-text">
-            Guest mode — dashboard overview only. Sign in with Google or email to get the free Basic tier (live data and downloads). Crop and yield tools unlock on Standard or Premium.
+            Guest mode: dashboard access is available. Other modules follow the admin-controlled guest access settings.
           </p>
         ) : (
           <>

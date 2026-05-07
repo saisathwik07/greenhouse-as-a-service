@@ -119,7 +119,7 @@ function DeviceRow({ device }) {
 
 export default function IoTMonitoringService() {
   const { canAccess } = useSubscription();
-  const allowed = canAccess("liveData") || canAccess("mqtt");
+  const allowed = canAccess("liveData") || canAccess("mqtt") || canAccess("irrigation");
 
   const [latest, setLatest] = useState(null);
   const [alerts, setAlerts] = useState([]);

@@ -27,14 +27,14 @@ const SERVICE_META = {
     description:
       "Match fertilizers to your soil chemistry using the same scoring rules as the production API.",
     accuracy: "Rule-based",
-    feature: null,
+    feature: "fertigation",
   },
   fertigation: {
     title: "Fertigation Control",
     description:
       "Configure pH and EC targets, dosage and irrigation schedule for your active grow zone.",
     accuracy: "Rule-based",
-    feature: null,
+    feature: "fertigation",
   },
 };
 
@@ -279,12 +279,15 @@ export default function AgriculturalPage() {
   const { canAccess, plan } = useSubscription();
   const cropAllowed = canAccess("cropRecommendation");
   const yieldAllowed = canAccess("yieldPrediction");
+  const fertigationAllowed = canAccess("fertigation");
 
   const allowedForActive =
     activeService === "crop"
       ? cropAllowed
       : activeService === "yield"
       ? yieldAllowed
+      : activeService === "fertilizer" || activeService === "fertigation"
+      ? fertigationAllowed
       : true;
 
   return (
@@ -321,8 +324,32 @@ export default function AgriculturalPage() {
           )}
         </div>
       )}
-      {activeService === "fertilizer" && <FertilizerRecommendation />}
-      {activeService === "fertigation" && <FertigationControl />}
+      {activeService === "fertilizer" && (
+        <div className="relative">
+          <div className={fertigationAllowed ? "" : "pointer-events-none blur-[1px] select-none"}>
+            <FertilizerRecommendation />
+          </div>
+          {!fertigationAllowed && (
+            <UpgradeLock
+              title="Upgrade Required"
+              message="Fertilizer and fertigation tools require guest access to be unlocked or a paid subscription."
+            />
+          )}
+        </div>
+      )}
+      {activeService === "fertigation" && (
+        <div className="relative">
+          <div className={fertigationAllowed ? "" : "pointer-events-none blur-[1px] select-none"}>
+            <FertigationControl />
+          </div>
+          {!fertigationAllowed && (
+            <UpgradeLock
+              title="Upgrade Required"
+              message="Fertigation Control requires guest access to be unlocked or a paid subscription."
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1118,4 +1145,3 @@ function FertigationControl() {
     </div>
   );
 }
-

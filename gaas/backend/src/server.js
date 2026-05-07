@@ -26,6 +26,7 @@ const cors = require("cors");
 const XLSX = require("xlsx");
 const { connectDB } = require("./config/db");
 const authRoutes = require("./routes/auth");
+const guestAccessRoutes = require("./routes/guestAccess");
 const adminRoutes = require("./routes/admin");
 const subscriptionRoutes = require("./routes/subscription");
 const paymentRoutes = require("./routes/payment");
@@ -74,6 +75,7 @@ app.use(express.json());
 
 /** Auth: Google login + JWT; Admin: user list (MongoDB) */
 app.use("/api/auth", authRoutes);
+app.use("/api/guest-access", guestAccessRoutes);
 /** Mount granular admin user routes before the bulk admin routers for predictable routing. */
 app.use("/api/admin", adminUsersRoutes);
 app.use("/api/admin", adminRoutes);

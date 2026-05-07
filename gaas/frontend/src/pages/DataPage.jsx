@@ -8,7 +8,10 @@ import ChartContainer from "../components/ChartContainer";
 import SensorCard from "../components/SensorCard";
 import { useSensors, useSensorHistory } from "../hooks/useSensors";
 import { useSubscription } from "../hooks/useSubscription";
+import { useAuth } from "../hooks/useAuth";
+import { GUEST_FEATURE_LOCKED_TITLE, useGuestAccess } from "../hooks/useGuestAccess";
 import { api } from "../api";
+import { useNavigate } from "react-router-dom";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -28,6 +31,9 @@ const SENSOR_COLORS = {
 
 export default function DataPage() {
   const { canAccess } = useSubscription();
+  const { isGuest } = useAuth();
+  const { openGuestAccessModal } = useGuestAccess();
+  const navigate = useNavigate();
   const canDownload = canAccess("downloadData");
   const [activeTab, setActiveTab] = useState("realtime");
   const [timeRange, setTimeRange] = useState(24);
@@ -75,6 +81,19 @@ export default function DataPage() {
   }), [history, visibleSensors]);
 
   const handleDownload = useCallback(async () => {
+    if (!canDownload) {
+      if (isGuest) {
+        openGuestAccessModal({
+          featureName: "downloadData",
+          title: GUEST_FEATURE_LOCKED_TITLE,
+          message: "Data Downloads are unavailable for guests with the current settings.",
+        });
+      } else {
+        navigate("/subscription");
+      }
+      return;
+    }
+
     try {
       const params = new URLSearchParams();
       params.set("start", new Date(Date.now() - timeRange * 3600000).toISOString());
@@ -89,7 +108,7 @@ export default function DataPage() {
     } catch (err) {
       console.error("Download failed", err);
     }
-  }, [timeRange, visibleSensors]);
+  }, [canDownload, isGuest, navigate, openGuestAccessModal, timeRange, visibleSensors]);
 
   return (
     <div className="space-y-6 animate-in">
@@ -201,7 +220,7 @@ export default function DataPage() {
             <ChartContainer
               title={`Sensor History — Last ${timeRange}h`}
               data={chartData}
-              onDownload={canDownload ? handleDownload : undefined}
+              onDownload={handleDownload}
               height={360}
             />
           )}

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./hooks/useAuth";
+import { GuestAccessProvider } from "./hooks/useGuestAccess";
 import "./index.css";
 import App from "./App.jsx";
 
@@ -27,7 +28,9 @@ function AppTree() {
   const inner = (
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <GuestAccessProvider>
+          <App />
+        </GuestAccessProvider>
       </AuthProvider>
     </BrowserRouter>
   );
