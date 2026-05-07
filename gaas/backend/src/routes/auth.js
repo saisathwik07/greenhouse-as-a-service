@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
-const { adminEmail, jwtSecret, googleClientId, signAccessToken } = require("../config/authConfig");
+const { adminEmail, jwtSecret, signAccessToken } = require("../config/authConfig");
 const { expireUserPlanIfNeeded } = require("../services/planExpiryService");
 const { trackEvent, recordLogin } = require("../services/eventTracker");
 
@@ -142,7 +142,8 @@ router.post("/google-login", async (req, res) => {
       return res.status(400).json({ error: "idToken is required" });
     }
 
-    const audience = process.env.GOOGLE_CLIENT_ID || googleClientId;
+    /** Web OAuth client ID; must match the frontend VITE_GOOGLE_CLIENT_ID. */
+    const audience = String(process.env.GOOGLE_CLIENT_ID || "").trim();
     if (!audience) {
       console.error("[auth/google-login] GOOGLE_CLIENT_ID is not set in environment");
       return res.status(500).json({

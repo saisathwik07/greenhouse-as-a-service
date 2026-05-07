@@ -70,7 +70,31 @@ function softAuth(req, _res, next) {
 const app = express();
 const PORT = process.env.PORT || 5100;
 
-app.use(cors());
+/** Browser clients (Vercel + Vite). Add origins via CORS_ALLOWED_ORIGINS (comma-separated). */
+const CORS_DEFAULT_ORIGINS = [
+  "https://gaas-drab.vercel.app",
+  "http://localhost:5173",
+];
+const CORS_EXTRA = String(process.env.CORS_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+const ALLOWED_ORIGINS = new Set([...CORS_DEFAULT_ORIGINS, ...CORS_EXTRA]);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (ALLOWED_ORIGINS.has(origin)) {
+        return callback(null, origin);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 /** Auth: Google login + JWT; Admin: user list (MongoDB) */
