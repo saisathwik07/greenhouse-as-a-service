@@ -71,31 +71,22 @@ function softAuth(req, _res, next) {
 const app = express();
 const PORT = process.env.PORT || 5100;
 
-/** Browser clients (Vercel + Vite). Add origins via CORS_ALLOWED_ORIGINS (comma-separated). */
-const CORS_DEFAULT_ORIGINS = [
-  "https://gaas-drab.vercel.app",
-  "http://localhost:5173",
-];
-const CORS_EXTRA = String(process.env.CORS_ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-const ALLOWED_ORIGINS = new Set([...CORS_DEFAULT_ORIGINS, ...CORS_EXTRA]);
-
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin) {
-        return callback(null, true);
-      }
-      if (ALLOWED_ORIGINS.has(origin)) {
-        return callback(null, origin);
-      }
-      return callback(null, false);
-    },
+    origin: [
+      "https://gaas-drab.vercel.app",
+      "https://gaas-git-main-saisathwik123456-9451s-projects.vercel.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Preflight (OPTIONS) for any path; browsers send this before cross-origin requests.
+app.options("*", cors());
+
 app.use(express.json());
 
 /** Auth: Google login + JWT; Admin: user list (MongoDB) */
