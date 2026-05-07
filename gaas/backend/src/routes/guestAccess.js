@@ -3,7 +3,8 @@ const { listGuestAccessSettings } = require("../services/guestAccessService");
 
 const router = express.Router();
 
-router.get("/", async (_req, res, next) => {
+/** GET /api/guest-access — matches frontend `api.get("/guest-access")` (axios baseURL ends with /api). */
+router.get("/guest-access", async (_req, res, next) => {
   try {
     const settings = await listGuestAccessSettings();
     res.json({
