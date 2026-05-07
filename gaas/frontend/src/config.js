@@ -16,14 +16,22 @@
  *     → API_BASE_URL = ""
  *     → API_URL      = "/api"
  *
- *   VITE_API_URL=               (unset)
- *     → API_BASE_URL = ""
- *     → API_URL      = "/api"
+ * Production: if VITE_API_URL is unset or blank (e.g. Vercel env var set to
+ * empty overrides .env.production), default to the deployed Render API so POST
+ * /api/auth/* is not sent to the static frontend host (which often returns 405).
+ * Set VITE_API_URL explicitly to override (including "/api" for same-origin APIs).
  */
+
+/** Default Node API origin for production builds when VITE_API_URL is empty. */
+const PRODUCTION_API_ORIGIN_DEFAULT =
+  "https://greenhouse-as-a-service.onrender.com";
 
 function readRawEnv() {
   const raw = import.meta.env.VITE_API_URL;
-  return typeof raw === "string" ? raw.trim() : "";
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (trimmed) return trimmed;
+  if (import.meta.env.PROD) return PRODUCTION_API_ORIGIN_DEFAULT;
+  return "";
 }
 
 function stripTrailingSlash(value) {
