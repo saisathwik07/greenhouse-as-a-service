@@ -1,4 +1,6 @@
-require("dotenv").config();
+require("dotenv").config({
+  path: require("path").resolve(__dirname, "..", ".env"),
+});
 const XLSX = require("xlsx");
 const mongoose = require("mongoose");
 const SensorReading = require("../src/models/SensorReading");
@@ -26,7 +28,10 @@ async function main() {
     throw new Error("Usage: node scripts/importWorkbook.js <xlsx-file-path>");
   }
 
-  const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/gaas";
+  const mongoUri = String(process.env.MONGO_URI || "").trim();
+  if (!mongoUri) {
+    throw new Error("MONGO_URI is required. Set it in gaas/backend/.env (no localhost fallback).");
+  }
   await mongoose.connect(mongoUri);
 
   const workbook = XLSX.readFile(filePath);

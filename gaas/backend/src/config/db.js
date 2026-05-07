@@ -17,7 +17,13 @@ function maskMongoUri(uri) {
  * Retries every RETRY_MS on failure (helps transient DNS/network issues).
  */
 async function connectDB() {
-  const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/Gaas";
+  const mongoUri = String(process.env.MONGO_URI || "").trim();
+  if (!mongoUri) {
+    throw new Error(
+      "MONGO_URI is not set. Add it to gaas/backend/.env (or set the env var on your host). " +
+        "A MongoDB connection string is required; there is no localhost fallback."
+    );
+  }
   const isAtlas = mongoUri.startsWith("mongodb+srv://");
 
   for (;;) {

@@ -1,22 +1,23 @@
-const path = require("path");
 require("dotenv").config({
-  path: path.resolve(__dirname, "..", ".env"),
+  path: require("path").resolve(__dirname, "..", ".env"),
 });
 
 const dns = require("dns");
 dns.setDefaultResultOrder("ipv4first");
 
-if (process.env.MONGO_URI) {
+if (process.env.MONGO_URI?.trim()) {
   const m = String(process.env.MONGO_URI).match(/@([^/?]+)/);
   console.log("[env] MONGO_URI loaded; cluster host:", m ? m[1] : "(could not parse)");
 } else {
-  console.warn("[env] MONGO_URI not set — using db.js fallback (localhost)");
+  console.error(
+    "[env] MONGO_URI is missing. Set it in gaas/backend/.env (see .env.example). The server will exit if MongoDB cannot connect."
+  );
 }
 
 if (!process.env.GOOGLE_CLIENT_ID?.trim()) {
   console.warn(
-    "[env] GOOGLE_CLIENT_ID empty — /.env resolved from:",
-    path.resolve(__dirname, "..", ".env")
+    "[env] GOOGLE_CLIENT_ID empty — /.env file:",
+    require("path").resolve(__dirname, "..", ".env")
   );
 }
 
