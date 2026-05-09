@@ -25,6 +25,8 @@ const AUDIT_LABELS = {
   subscription_cancelled: "Cancelled subscription",
   quota_reset: "Reset usage quota",
   plan_updated: "Updated plan",
+  role_promoted: "Promoted to admin",
+  role_demoted: "Removed admin role",
 };
 
 function formatINR(value) {
@@ -635,6 +637,83 @@ export default function UserDrawer({ userId, onClose, onUserChanged, currentAdmi
                       >
                         Delete account
                       </button>
+                    </div>
+
+                    {/* Make Admin / Remove Admin */}
+                    <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-gaas-muted font-bold">
+                        Role management
+                      </p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-gaas-heading">
+                            Current role:{" "}
+                            <span className={`capitalize ${
+                              isAdminTarget ? "text-indigo-600" : "text-gaas-muted"
+                            }`}>
+                              {profile?.role || "user"}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-gaas-muted">
+                            {isAdminTarget
+                              ? "This user has full admin access."
+                              : "Promote to give admin dashboard access."}
+                          </p>
+                        </div>
+                        {isSelf ? (
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-gray-100 text-gaas-muted font-semibold">
+                            Your account
+                          </span>
+                        ) : isAdminTarget ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openConfirm({
+                                tone: "warning",
+                                title: "Remove admin access?",
+                                description:
+                                  "This user will lose access to the admin dashboard and all admin features.",
+                                confirmLabel: "Remove admin",
+                                onConfirm: async () => {
+                                  await runAction("Admin role removed", () =>
+                                    api.post(`/admin/users/${userId}/set-role`, {
+                                      role: "user",
+                                    })
+                                  );
+                                  closeConfirm();
+                                },
+                              })
+                            }
+                            className="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-amber-500 text-white hover:bg-amber-600"
+                          >
+                            Remove admin
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openConfirm({
+                                tone: "warning",
+                                title: "Make this user an admin?",
+                                description:
+                                  "They will get full admin access: user management, revenue analytics, guest access control, and more.",
+                                confirmLabel: "Make admin",
+                                onConfirm: async () => {
+                                  await runAction("User promoted to admin", () =>
+                                    api.post(`/admin/users/${userId}/set-role`, {
+                                      role: "admin",
+                                    })
+                                  );
+                                  closeConfirm();
+                                },
+                              })
+                            }
+                            className="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                          >
+                            ⭐ Make admin
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Subscription management */}

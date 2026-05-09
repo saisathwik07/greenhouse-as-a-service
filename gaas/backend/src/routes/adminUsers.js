@@ -567,4 +567,54 @@ router.get("/audit-logs", async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/admin/users/:id/set-role
+ * Body: { role: 'admin' | 'user' }
+ * Promotes or demotes a user. Admins cannot demote themselves.
+ */
+router.post("/users/:id/set-role", async (req, res, next) => {
+  try {
+    const target = await loadTarget(req.params.id, res);
+    if (!target) return;
+
+    const newRole = String(req.body?.role || "").toLowerCase();
+    if (newRole !== "admin" && newRole !== "user") {
+      return res.status(400).json({ error: "role must be 'admin' or 'user'" });
+    }
+
+    if (isSelf(req, target._id) && newRole !== "admin") {
+      return res.status(403).json({ error: "You cannot demote yourself" });
+    }
+
+    const before = target.role;
+    if (before === newRole) {
+      return res.json({ ok: true, user: publicProfile(target), already: true });
+    }
+
+    target.role = newRole;
+    await target.save();
+
+    await writeAdminAudit({
+      req,
+      action: newRole === "admin" ? "role_promoted" : "role_demoted",
+      target,
+      metadata: { before, after: newRole },
+    });
+
+    notifySafe(target._id, {
+      type: "ticket_status",
+      title: newRole === "admin" ? "You are now an Admin" : "Role changed",
+      body:
+        newRole === "admin"
+          ? "An administrator granted you admin access."
+          : "Your admin access has been revoked.",
+      link: "/profile",
+    });
+
+    res.json({ ok: true, user: publicProfile(target) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
