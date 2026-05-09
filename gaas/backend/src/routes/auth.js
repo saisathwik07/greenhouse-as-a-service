@@ -103,6 +103,10 @@ router.post("/login", async (req, res) => {
     }
 
     user.lastLoginAt = new Date();
+    // Auto-promote to admin if email is in ADMIN_EMAIL list
+    if (isAdminEmail(normalizedEmail) && user.role !== "admin") {
+      user.role = "admin";
+    }
     await user.save();
     await Promise.all([
       trackEvent({ userId: user._id, type: "login", req, user }),
@@ -187,7 +191,7 @@ router.post("/google-login", async (req, res) => {
     const name = String(payload.name || email.split("@")[0]).trim();
     const picture = payload.picture ? String(payload.picture) : "";
     const now = new Date();
-    const role = email === adminEmail ? "admin" : "user";
+    const role = isAdminEmail(email) ? "admin" : "user";
 
     /** Paid tiers — do not downgrade on Google re-login */
     const paidPlans = new Set(["pro", "premium", "standard"]);
