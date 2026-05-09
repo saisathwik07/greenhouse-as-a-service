@@ -113,6 +113,23 @@ function requireEntitlement(featureKey) {
         const legacyOk = LEGACY_PLAN_BYPASS.has(String(user?.plan || "").toLowerCase());
 
         if (!hasItem && !legacyOk) {
+          // Before blocking, check if admin has globally unlocked all features
+          // (guest global unlock should also benefit logged-in basic users).
+          const guestAccess = await getGuestFeatureAccess(featureKey);
+          if (guestAccess.allowed) {
+            req.entitlements = {
+              guest: false,
+              guestGlobalUnlock: true,
+              admin: false,
+              services,
+              addons,
+              plan: user?.plan || null,
+            };
+            touchUserActivity(userId);
+            trackEvent({ userId, type: "feature_used", featureKey, metadata: { guestGlobalUnlock: true }, req });
+            return next();
+          }
+
           return res.status(402).json({
             error: "Feature not included in your current subscription.",
             feature: featureKey,
