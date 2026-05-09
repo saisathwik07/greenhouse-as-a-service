@@ -3,7 +3,13 @@
  */
 const jwt = require("jsonwebtoken");
 
-const adminEmail = (process.env.ADMIN_EMAIL || "saisathwik123456@gmail.com").toLowerCase();
+const adminEmailsRaw = (process.env.ADMIN_EMAIL || "saisathwik123456@gmail.com").toLowerCase();
+const adminEmails = new Set(adminEmailsRaw.split(",").map((e) => e.trim()).filter(Boolean));
+/** Check if an email is an admin email. */
+function isAdminEmail(email) {
+  return adminEmails.has(String(email || "").toLowerCase().trim());
+}
+const adminEmail = adminEmails.values().next().value; // Primary admin (backwards compat)
 const jwtSecret = process.env.JWT_SECRET || "gaas-dev-secret-change-in-production";
 
 /**
@@ -26,6 +32,7 @@ function signAccessToken(user) {
 
 module.exports = {
   adminEmail,
+  isAdminEmail,
   jwtSecret,
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   signAccessToken,

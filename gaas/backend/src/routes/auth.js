@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
-const { adminEmail, jwtSecret, signAccessToken } = require("../config/authConfig");
+const { isAdminEmail, jwtSecret, signAccessToken } = require("../config/authConfig");
 const { expireUserPlanIfNeeded } = require("../services/planExpiryService");
 const { trackEvent, recordLogin } = require("../services/eventTracker");
 
@@ -27,7 +27,7 @@ router.post("/register", async (req, res) => {
     if (existing) return res.status(409).json({ error: "Email already registered" });
 
     const hashed = await bcrypt.hash(String(password), 10);
-    const role = normalizedEmail === adminEmail ? "admin" : "user";
+    const role = isAdminEmail(normalizedEmail) ? "admin" : "user";
     const user = await User.create({
       name: String(name).trim(),
       email: normalizedEmail,
