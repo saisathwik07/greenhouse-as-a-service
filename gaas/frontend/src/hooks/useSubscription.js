@@ -113,9 +113,14 @@ export function useSubscription() {
       }
 
       const allowedRoles = ACCESS_RULES[featureName];
-      if (!allowedRoles) return false;
-      const role = subscription?.role || "guest";
-      return allowedRoles.includes(role);
+      if (allowedRoles) {
+        const role = subscription?.role || "guest";
+        if (allowedRoles.includes(role)) return true;
+      }
+
+      // Fallback: if admin has globally unlocked guest access,
+      // logged-in basic users should also benefit.
+      return isGuestFeatureUnlocked(featureName);
     },
     [subscription, isAdmin, user?.role, isGuestFeatureUnlocked]
   );
