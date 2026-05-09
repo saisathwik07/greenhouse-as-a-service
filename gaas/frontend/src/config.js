@@ -24,7 +24,7 @@
 
 /** Default Node API origin for production builds when VITE_API_URL is empty. */
 const PRODUCTION_API_ORIGIN_DEFAULT =
-  "https://greenhouse-as-a-service.onrender.com";
+  "https://greenhouse-as-a-service-z60w.onrender.com";
 
 function readRawEnv() {
   const raw = import.meta.env.VITE_API_URL;

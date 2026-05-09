@@ -73,7 +73,7 @@ const PORT = process.env.PORT || 5100;
 
 app.use(
   cors({
-    origin: ["https://gaas-drab.vercel.app", "http://localhost:5173"],
+    origin: ["https://gaas-drab.vercel.app", "http://localhost:5173", "https://gaas-git-main-saisathwik123456-9451s-projects.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
