@@ -81,7 +81,7 @@ app.use(
 );
 
 // Preflight (OPTIONS) for any path; browsers send this before cross-origin requests.
-app.options("*", cors());
+app.options("/{*path}", cors());
 
 app.use((req, res, next) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
