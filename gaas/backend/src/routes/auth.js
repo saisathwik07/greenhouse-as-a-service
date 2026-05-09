@@ -298,4 +298,34 @@ router.post("/google-login", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/auth/me
+ * Returns the current user's profile. Used by the frontend to sync role/plan
+ * changes without requiring re-login (e.g. after dynamic admin promotion).
+ */
+const { authenticate } = require("../middleware/authenticate");
+
+router.get("/me", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password").lean();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    return res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        walletBalance: user.walletBalance,
+        planExpiresAt: user.planExpiresAt || user.planEndDate || null,
+      },
+    });
+  } catch (err) {
+    console.error("[auth/me]", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

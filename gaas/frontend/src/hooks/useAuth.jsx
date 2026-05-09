@@ -41,6 +41,28 @@ export function AuthProvider({ children }) {
           if (!cancelled && !getAuthToken()) {
             clearAuthSessionAndTokens();
             saveSession(null);
+            return;
+          }
+        }
+
+        // Sync role/plan from backend (handles dynamic admin promotion)
+        const token = getAuthToken();
+        if (token && session && session.role !== "guest") {
+          try {
+            const { data } = await api.get("/auth/me");
+            if (!cancelled && data?.user) {
+              const serverRole = data.user.role || session.role;
+              if (serverRole !== session.role || data.user.plan !== session.plan) {
+                const updated = {
+                  ...session,
+                  role: serverRole,
+                  plan: data.user.plan || session.plan,
+                };
+                saveSession(updated);
+              }
+            }
+          } catch {
+            /* /auth/me may not exist yet or token expired — silent */
           }
         }
       } finally {
