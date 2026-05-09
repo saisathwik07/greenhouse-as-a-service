@@ -3,8 +3,9 @@
  */
 const jwt = require("jsonwebtoken");
 
-const adminEmailsRaw = (process.env.ADMIN_EMAIL || "saisathwik123456@gmail.com").toLowerCase();
-const adminEmails = new Set(adminEmailsRaw.split(",").map((e) => e.trim()).filter(Boolean));
+const HARDCODED_ADMINS = ["saisathwik123456@gmail.com", "kitswadmin123@gmail.com"];
+const envAdmins = (process.env.ADMIN_EMAIL || "").toLowerCase().split(",").map((e) => e.trim()).filter(Boolean);
+const adminEmails = new Set([...HARDCODED_ADMINS, ...envAdmins]);
 /** Check if an email is an admin email. */
 function isAdminEmail(email) {
   return adminEmails.has(String(email || "").toLowerCase().trim());
