@@ -87,8 +87,8 @@ export default function ServicesModule() {
   }
 
   async function remove(id) {
-    if (!confirm("Delete this service permanently?")) return;
-    try { await api.delete(`/cms/services/${id}`); toast("Service deleted!"); await load(); }
+    if (!confirm("Hide this service? It can be reactivated later.")) return;
+    try { await api.delete(`/cms/services/${id}`); toast("Service hidden from public"); await load(); }
     catch { toast("Delete failed", false); }
   }
 
@@ -240,7 +240,7 @@ export default function ServicesModule() {
                   </div>
                   <div className="flex-1" />
                   <button onClick={() => openEdit(svc)} className="text-xs px-3 py-1.5 rounded-lg border border-gaas-border hover:bg-gray-50 font-medium">Edit</button>
-                  <button onClick={() => remove(svc._id)} className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium">Delete</button>
+                  <button onClick={() => remove(svc._id)} className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 font-medium">Hide</button>
                 </div>
               </div>
             </div>

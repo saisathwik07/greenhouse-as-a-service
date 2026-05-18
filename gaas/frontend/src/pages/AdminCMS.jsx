@@ -4,8 +4,10 @@ import { api } from "../api";
 import ContentModule from "./cms/ContentModule";
 import ServicesModule from "./cms/ServicesModule";
 import BlogModule from "./cms/BlogModule";
+import PagesModule from "./cms/PagesModule";
 
 const CMS_TABS = [
+  { id: "pages", label: "Pages", icon: "📄", desc: "Create and manage dynamic website pages" },
   { id: "content", label: "Website", icon: "🌐", desc: "Manage homepage sections, images, and content" },
   { id: "services", label: "Services", icon: "⚙️", desc: "Create, edit, and control platform services" },
   { id: "blogs", label: "Blog", icon: "📰", desc: "Write, publish, and manage blog posts" },
@@ -24,21 +26,25 @@ function StatCard({ icon, label, value, sub }) {
 }
 
 export default function AdminCMS() {
-  const [tab, setTab] = useState("content");
-  const [stats, setStats] = useState({ services: 0, activeServices: 0, blogs: 0, published: 0 });
+  const [tab, setTab] = useState("pages");
+  const [stats, setStats] = useState({ services: 0, activeServices: 0, blogs: 0, published: 0, pages: 0, visiblePages: 0 });
 
   useEffect(() => {
     Promise.allSettled([
       api.get("/cms/services?all=1"),
       api.get("/cms/blogs?all=1"),
-    ]).then(([svcResult, blogResult]) => {
+      api.get("/cms/pages?all=1"),
+    ]).then(([svcResult, blogResult, pageResult]) => {
       const svcs = svcResult.status === "fulfilled" ? svcResult.value.data.services || [] : [];
       const blogs = blogResult.status === "fulfilled" ? blogResult.value.data.blogs || [] : [];
+      const pgs = pageResult.status === "fulfilled" ? pageResult.value.data.pages || [] : [];
       setStats({
         services: svcs.length,
         activeServices: svcs.filter((s) => s.activeStatus).length,
         blogs: blogs.length,
         published: blogs.filter((b) => b.status === "published").length,
+        pages: pgs.length,
+        visiblePages: pgs.filter((p) => p.visible).length,
       });
     });
   }, [tab]); // refresh when tab changes
@@ -61,9 +67,9 @@ export default function AdminCMS() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard icon="📄" label="Pages" value={stats.pages} sub={`${stats.visiblePages} visible`} />
         <StatCard icon="⚙️" label="Services" value={stats.services} sub={`${stats.activeServices} active`} />
         <StatCard icon="📰" label="Blog Posts" value={stats.blogs} sub={`${stats.published} published`} />
-        <StatCard icon="🌐" label="Sections" value="6" sub="configurable" />
         <StatCard icon="🎛️" label="Controls" value="Live" sub="real-time" />
       </div>
 
@@ -103,6 +109,7 @@ export default function AdminCMS() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
+          {tab === "pages" && <PagesModule />}
           {tab === "content" && <ContentModule />}
           {tab === "services" && <ServicesModule />}
           {tab === "blogs" && <BlogModule />}

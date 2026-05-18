@@ -7,6 +7,7 @@ const express = require("express");
 const WebsiteContent = require("../models/WebsiteContent");
 const Service = require("../models/Service");
 const Blog = require("../models/Blog");
+const Page = require("../models/Page");
 const { authenticate } = require("../middleware/authenticate");
 const { requireAdminRole } = require("../middleware/admin");
 
@@ -157,14 +158,19 @@ router.put("/services/:id", authenticate, requireAdminRole, async (req, res, nex
 
 /**
  * DELETE /api/cms/services/:id  (admin)
+ * Soft-delete: sets activeStatus=false so it can be reactivated.
  */
 router.delete("/services/:id", authenticate, requireAdminRole, async (req, res, next) => {
   try {
-    const service = await Service.findByIdAndDelete(req.params.id);
+    const service = await Service.findByIdAndUpdate(
+      req.params.id,
+      { $set: { activeStatus: false } },
+      { new: true }
+    ).lean();
     if (!service) {
       return res.status(404).json({ error: "Service not found" });
     }
-    return res.json({ ok: true, deleted: req.params.id });
+    return res.json({ ok: true, service, softDeleted: true });
   } catch (err) {
     return next(err);
   }
@@ -273,6 +279,127 @@ router.delete("/blogs/:id", authenticate, requireAdminRole, async (req, res, nex
       return res.status(404).json({ error: "Blog not found" });
     }
     return res.json({ ok: true, deleted: req.params.id });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/* ========================================================================== */
+/*  PAGE MANAGEMENT                                                           */
+/* ========================================================================== */
+
+/**
+ * GET /api/cms/pages  (public)
+ * Returns visible pages. Admin can pass ?all=1 to include hidden pages.
+ */
+router.get("/pages", async (req, res, next) => {
+  try {
+    const filter = req.query.all === "1" ? {} : { visible: true };
+    const pages = await Page.find(filter)
+      .sort({ sortOrder: 1, createdAt: -1 })
+      .lean();
+    return res.json({ pages });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * GET /api/cms/pages/:idOrSlug  (public)
+ */
+router.get("/pages/:idOrSlug", async (req, res, next) => {
+  try {
+    const param = req.params.idOrSlug;
+    let page = null;
+    if (param.match(/^[0-9a-fA-F]{24}$/)) {
+      page = await Page.findById(param).lean();
+    }
+    if (!page) {
+      page = await Page.findOne({ slug: param.toLowerCase() }).lean();
+    }
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    return res.json({ page });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+/**
+ * POST /api/cms/pages  (admin)
+ */
+router.post("/pages", authenticate, requireAdminRole, async (req, res, next) => {
+  try {
+    const { title, slug, bannerImage, description, sections, visible, sortOrder } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+    const pageSlug = slug
+      ? String(slug).trim().toLowerCase().replace(/[^a-z0-9-]/g, "-")
+      : String(title).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const page = await Page.create({
+      title: String(title).trim(),
+      slug: pageSlug,
+      bannerImage: bannerImage || "",
+      description: description || "",
+      sections: Array.isArray(sections) ? sections : [],
+      visible: visible !== false,
+      sortOrder: Number(sortOrder) || 0,
+    });
+    return res.status(201).json({ ok: true, page });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: "A page with this slug already exists" });
+    }
+    return next(err);
+  }
+});
+
+/**
+ * PUT /api/cms/pages/:id  (admin)
+ */
+router.put("/pages/:id", authenticate, requireAdminRole, async (req, res, next) => {
+  try {
+    const allowed = ["title", "slug", "bannerImage", "description", "sections", "visible", "sortOrder"];
+    const update = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+    if (update.slug) {
+      update.slug = String(update.slug).trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    }
+    const page = await Page.findByIdAndUpdate(
+      req.params.id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).lean();
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    return res.json({ ok: true, page });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: "A page with this slug already exists" });
+    }
+    return next(err);
+  }
+});
+
+/**
+ * DELETE /api/cms/pages/:id  (admin) — soft delete
+ */
+router.delete("/pages/:id", authenticate, requireAdminRole, async (req, res, next) => {
+  try {
+    const page = await Page.findByIdAndUpdate(
+      req.params.id,
+      { $set: { visible: false } },
+      { new: true }
+    ).lean();
+    if (!page) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+    return res.json({ ok: true, page, softDeleted: true });
   } catch (err) {
     return next(err);
   }

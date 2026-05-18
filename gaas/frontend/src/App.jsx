@@ -30,6 +30,7 @@ import AdminCMS from "./pages/AdminCMS";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
 import ServicesPage from "./pages/ServicesPage";
+import DynamicPage from "./pages/DynamicPage";
 import AdminRoute from "./components/AdminRoute";
 import NonGuestRoute from "./components/NonGuestRoute";
 import ChatWidget from "./components/ChatWidget";
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/login" element={authShell("login")} />
         <Route path="/signup" element={authShell("signup")} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/page/:slug" element={<DynamicPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -265,6 +267,7 @@ export default function App() {
                   </AdminRoute>
                 }
               />
+              <Route path="/page/:slug" element={<DynamicPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
