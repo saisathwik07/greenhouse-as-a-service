@@ -47,6 +47,32 @@ const websiteContentSchema = new mongoose.Schema(
     /* Homepage images (array of URLs) */
     homepageImages: { type: [String], default: [] },
 
+    /* Hero background image */
+    heroBackgroundImage: { type: String, default: "" },
+
+    /* About section image */
+    aboutImage: { type: String, default: "" },
+
+    /* Section visibility — admin can hide sections without deleting content */
+    sectionVisibility: {
+      type: Map,
+      of: Boolean,
+      default: {
+        hero: true,
+        about: true,
+        services: true,
+        testimonials: true,
+        contact: true,
+        footer: true,
+      },
+    },
+
+    /* Section ordering — controls the display order on the public landing page */
+    sectionOrder: {
+      type: [String],
+      default: ["hero", "about", "services", "testimonials", "contact", "footer"],
+    },
+
     /* Footer */
     footerText: {
       type: String,

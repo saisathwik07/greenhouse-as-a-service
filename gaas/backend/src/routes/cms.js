@@ -44,14 +44,18 @@ router.put("/content", authenticate, requireAdminRole, async (req, res, next) =>
       "heroTitle",
       "heroSubtitle",
       "heroDescription",
+      "heroBackgroundImage",
       "aboutTitle",
       "aboutDescription",
+      "aboutImage",
       "contactEmail",
       "contactPhone",
       "contactAddress",
       "testimonialsTitle",
       "homepageImages",
       "footerText",
+      "sectionVisibility",
+      "sectionOrder",
     ];
     const update = {};
     for (const key of allowed) {
