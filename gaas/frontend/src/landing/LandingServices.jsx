@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -15,8 +16,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { LCard, LCardContent } from "./landingUi";
+import axios from "axios";
+import { API_URL } from "../config";
 
-const services = [
+/* Default (hardcoded) services — used as fallback when CMS has no entries. */
+const DEFAULT_SERVICES = [
   {
     icon: Database,
     title: "Data as a Service",
@@ -111,6 +115,32 @@ const platformCapabilities = [
 ];
 
 export default function LandingServices() {
+  const [dynamicServices, setDynamicServices] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/cms/services`)
+      .then(({ data }) => {
+        if (data.services && data.services.length > 0) {
+          setDynamicServices(data.services);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  /* Use CMS services if available, otherwise fall back to hardcoded list */
+  const displayServices =
+    dynamicServices && dynamicServices.length > 0
+      ? dynamicServices.map((svc) => ({
+          icon: null,
+          title: svc.title,
+          price: svc.pricing || "",
+          desc: svc.description || "",
+          image: svc.image || "",
+          features: svc.features || [],
+        }))
+      : DEFAULT_SERVICES;
+
   return (
     <section id="services" className="overflow-hidden bg-[#f5fbf0] py-24">
       <div className="container mx-auto px-4">
@@ -135,7 +165,7 @@ export default function LandingServices() {
         </div>
 
         <div className="mb-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, idx) => {
+          {displayServices.map((service, idx) => {
             const Icon = service.icon;
             return (
               <motion.div
@@ -148,15 +178,42 @@ export default function LandingServices() {
                 <LCard className="h-full border-[#1a4a2e]/10 bg-white hover:border-[#5a9e3a]/40 hover:shadow-lg">
                   <LCardContent className="p-6">
                     <div className="mb-5 flex items-start justify-between gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1a4a2e]/10">
-                        <Icon className="h-6 w-6 text-[#1a4a2e]" />
-                      </div>
-                      <span className="rounded-full bg-[#5a9e3a]/10 px-3 py-1 text-xs font-bold text-[#5a9e3a]">
-                        {service.price}
-                      </span>
+                      {Icon ? (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1a4a2e]/10">
+                          <Icon className="h-6 w-6 text-[#1a4a2e]" />
+                        </div>
+                      ) : service.image ? (
+                        <img
+                          src={service.image}
+                          alt=""
+                          className="h-12 w-12 rounded-2xl object-cover"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1a4a2e]/10">
+                          <span className="text-xl">🌿</span>
+                        </div>
+                      )}
+                      {service.price && (
+                        <span className="rounded-full bg-[#5a9e3a]/10 px-3 py-1 text-xs font-bold text-[#5a9e3a]">
+                          {service.price}
+                        </span>
+                      )}
                     </div>
                     <h4 className="mb-3 font-serif text-xl font-bold text-primary">{service.title}</h4>
                     <p className="leading-relaxed text-muted-foreground">{service.desc}</p>
+                    {service.features && service.features.length > 0 && (
+                      <ul className="mt-3 space-y-1">
+                        {service.features.map((feat, i) => (
+                          <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#5a9e3a] shrink-0" />
+                            {feat}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </LCardContent>
                 </LCard>
               </motion.div>
@@ -179,11 +236,11 @@ export default function LandingServices() {
             </p>
             <div className="space-y-4">
               {platformCapabilities.map((capability) => {
-                const Icon = capability.icon;
+                const CapIcon = capability.icon;
                 return (
                   <div key={capability.text} className="flex gap-4">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                      <Icon className="h-5 w-5 text-[#a3d977]" />
+                      <CapIcon className="h-5 w-5 text-[#a3d977]" />
                     </div>
                     <p className="text-white/80">{capability.text}</p>
                   </div>

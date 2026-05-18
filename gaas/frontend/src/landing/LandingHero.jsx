@@ -1,7 +1,26 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "../config";
 
 export default function LandingHero({ backgroundImage }) {
+  const [cms, setCms] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/cms/content`)
+      .then(({ data }) => setCms(data))
+      .catch(() => {});
+  }, []);
+
+  const title = cms?.heroTitle || "Smart Greenhouse as a Service";
+  const subtitle =
+    cms?.heroSubtitle || "KITSW CSE(IoT) Greenhouse-as-a-Service Platform";
+  const description =
+    cms?.heroDescription ||
+    "A full-stack smart agriculture service combining live IoT telemetry, crop and yield AI, fertigation advisory, MQTT monitoring, subscriptions, and support workflows.";
+
   return (
     <section
       id="hero"
@@ -20,15 +39,21 @@ export default function LandingHero({ backgroundImage }) {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <span className="mb-6 inline-block rounded-full border border-accent/30 bg-accent/20 px-3 py-1 text-sm font-medium tracking-wide text-accent backdrop-blur-sm">
-            KITSW CSE(IoT) Greenhouse-as-a-Service Platform
+            {subtitle}
           </span>
           <h1 className="mb-6 text-5xl font-bold leading-tight text-white md:text-7xl lg:text-8xl">
-            Smart Greenhouse <br />
-            <span className="italic text-accent">as a Service</span>
+            {title.includes("as a Service") ? (
+              <>
+                {title.split("as a Service")[0]}
+                <br />
+                <span className="italic text-accent">as a Service</span>
+              </>
+            ) : (
+              title
+            )}
           </h1>
           <p className="mx-auto mb-10 max-w-2xl font-sans text-lg font-light leading-relaxed text-white/90 md:text-xl">
-            A full-stack smart agriculture service combining live IoT telemetry, crop and yield AI,
-            fertigation advisory, MQTT monitoring, subscriptions, and support workflows.
+            {description}
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">

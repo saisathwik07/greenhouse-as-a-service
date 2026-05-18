@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { MapPin, Mail, Send, Leaf } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import { API_URL } from "../config";
 
 function SocialIcon({ children, label, href }) {
   return (
@@ -21,6 +23,21 @@ function SocialIcon({ children, label, href }) {
 export default function LandingContact() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [cms, setCms] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/cms/content`)
+      .then(({ data }) => setCms(data))
+      .catch(() => {});
+  }, []);
+
+  const contactEmail = cms?.contactEmail || "iot-lab@kitsw.ac.in";
+  const contactAddress =
+    cms?.contactAddress ||
+    "Kakatiya Institute of Technology and Science (KITSW), Warangal, Telangana — 506015, India";
+  const footerText =
+    cms?.footerText || `© ${new Date().getFullYear()} KITSW. All rights reserved.`;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -61,8 +78,7 @@ export default function LandingContact() {
                 </div>
                 <div>
                   <p className="mb-1 font-bold text-white">Address</p>
-                  <p className="text-white/70">Kakatiya Institute of Technology and Science (KITSW)</p>
-                  <p className="text-white/70">Warangal, Telangana — 506015, India</p>
+                  <p className="text-white/70">{contactAddress}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -72,7 +88,7 @@ export default function LandingContact() {
                 <div>
                   <p className="mb-1 font-bold text-white">Department</p>
                   <p className="text-white/70">CSE(IoT) — Industrial IoT Laboratory</p>
-                  <p className="text-sm text-white/60">iot-lab@kitsw.ac.in</p>
+                  <p className="text-sm text-white/60">{contactEmail}</p>
                 </div>
               </div>
             </div>
@@ -195,7 +211,7 @@ export default function LandingContact() {
           <p className="text-sm text-white/40">
             Kakatiya Institute of Technology and Science — CSE(IoT) Department, Warangal
           </p>
-          <p className="text-sm text-white/40">&copy; {new Date().getFullYear()} KITSW. All rights reserved.</p>
+          <p className="text-sm text-white/40">{footerText}</p>
         </motion.div>
       </div>
     </section>

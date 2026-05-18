@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
     "/api/admin": { target: NODE_API, changeOrigin: true },
     "/api/subscription": { target: NODE_API, changeOrigin: true },
     "/api/payment": { target: NODE_API, changeOrigin: true },
-    "/api/yield": { target: FLASK_YIELD, changeOrigin: true },
+    "/api/yield": { target: NODE_API, changeOrigin: true },
     "/yield-api": {
       target: YIELD_API,
       changeOrigin: true,

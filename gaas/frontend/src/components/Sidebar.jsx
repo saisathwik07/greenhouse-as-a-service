@@ -126,6 +126,8 @@ const GROUPS = [
     items: [
       { to: "/help", label: "Help Center", guestOk: true },
       { to: "/my-tickets", label: "My Tickets" },
+      { to: "/blog", label: "Blog", guestOk: true },
+      { to: "/services", label: "Services", guestOk: true },
     ],
   },
   {
@@ -140,6 +142,7 @@ const GROUPS = [
       { to: "/admin/analytics?view=reports", label: "Reports" },
       { to: "/admin/support", label: "Ticket Management" },
       { to: "/admin/analytics?view=datasets", label: "Dataset Analytics" },
+      { to: "/admin/cms", label: "CMS Management" },
     ],
   },
 ];

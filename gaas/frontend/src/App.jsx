@@ -26,6 +26,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminSupportPage from "./pages/AdminSupportPage";
 import HelpPage from "./pages/HelpPage";
 import MyTicketsPage from "./pages/MyTicketsPage";
+import AdminCMS from "./pages/AdminCMS";
+import BlogPage from "./pages/BlogPage";
+import BlogPostPage from "./pages/BlogPostPage";
+import ServicesPage from "./pages/ServicesPage";
 import AdminRoute from "./components/AdminRoute";
 import NonGuestRoute from "./components/NonGuestRoute";
 import ChatWidget from "./components/ChatWidget";
@@ -250,6 +254,17 @@ export default function App() {
               />
               <Route path="/help" element={<HelpPage />} />
               <Route path="/my-tickets" element={<MyTicketsPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/blog/:id" element={<BlogPostPage />} />
+              <Route path="/services" element={<ServicesPage />} />
+              <Route
+                path="/admin/cms"
+                element={
+                  <AdminRoute>
+                    <AdminCMS />
+                  </AdminRoute>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

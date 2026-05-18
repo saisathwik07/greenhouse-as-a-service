@@ -319,6 +319,9 @@ export default function AdminDashboard() {
               <Link to="/admin/support" className="btn-secondary text-sm">
                 Support tickets
               </Link>
+              <Link to="/admin/cms" className="btn-secondary text-sm">
+                CMS Panel
+              </Link>
               <Link to="/" className="btn-secondary text-sm">
                 ← Back to app
               </Link>

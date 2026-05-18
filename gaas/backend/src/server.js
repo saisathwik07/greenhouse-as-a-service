@@ -42,6 +42,7 @@ const billingRoutes = require("./routes/billing");
 const userRoutes = require("./routes/user");
 const adminIntelligenceRoutes = require("./routes/adminIntelligence");
 const adminUsersRoutes = require("./routes/adminUsers");
+const cmsRoutes = require("./routes/cms");
 const { trackEvent } = require("./services/eventTracker");
 const jwt = require("jsonwebtoken");
 const { jwtSecret } = require("./config/authConfig");
@@ -107,6 +108,7 @@ app.use("/api/plans", planRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/cms", cmsRoutes);
 
 /** Serve uploaded screenshots (ticket attachments). */
 app.use(

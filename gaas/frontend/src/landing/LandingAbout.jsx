@@ -1,7 +1,25 @@
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "../config";
 
 export default function LandingAbout({ signboardImage }) {
+  const [cms, setCms] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/cms/content`)
+      .then(({ data }) => setCms(data))
+      .catch(() => {});
+  }, []);
+
+  const aboutTitle =
+    cms?.aboutTitle || "From Greenhouse Prototype to Service Platform";
+  const aboutDescription =
+    cms?.aboutDescription ||
+    "Greenhouse as a Service (GaaS) extends the KITSW CSE(IoT) smart greenhouse into a production-oriented platform for growers, students, faculty, and research teams. It connects field sensors, dashboards, AI models, subscriptions, and support into one service flow.";
+
   const goals = [
     "Deliver live greenhouse data as a service",
     "Recommend crops, fertilizer, and yield forecasts",
@@ -46,21 +64,11 @@ export default function LandingAbout({ signboardImage }) {
           >
             <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-accent">About GaaS</h2>
             <h3 className="mb-6 font-serif text-4xl font-bold text-primary md:text-5xl">
-              From Greenhouse Prototype to Service Platform
+              {aboutTitle}
             </h3>
 
             <div className="mb-8 max-w-none space-y-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
-              <p>
-                Greenhouse as a Service (GaaS) extends the KITSW CSE(IoT) smart greenhouse into a
-                production-oriented platform for growers, students, faculty, and research teams. It
-                connects field sensors, dashboards, AI models, subscriptions, and support into one
-                service flow.
-              </p>
-              <p>
-                The website now reflects both sides of the work: the physical greenhouse implementation
-                and the software services built around live data, crop intelligence, fertigation, and
-                research-ready exports.
-              </p>
+              <p>{aboutDescription}</p>
             </div>
 
             <div className="mb-10 space-y-4">
