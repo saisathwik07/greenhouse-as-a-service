@@ -17,20 +17,32 @@ A full-stack smart agriculture SaaS platform combining real-time IoT telemetry, 
 # 📸 Project Preview
 
 ## 🌍 Landing Page
-![Landing Page](assets/landing.png)
+
+![Landing Page](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/landing.png)
+
+---
 
 ## 📊 Smart Dashboard
-![Dashboard](assets/dashboard.png)
+
+![Dashboard](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/dashboard.png)
+
+---
 
 ## 📈 Historical Analytics
-![Analytics](assets/history.png)
+
+![Analytics](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/history.png)
+
+---
 
 ## 🌾 Yield Prediction
-![Yield Prediction](assets/yield.png)
+
+![Yield Prediction](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/yield.png)
+
+---
 
 ## 👨‍💼 Admin SaaS Dashboard
-![Admin Dashboard](assets/admin.png)
 
+![Admin Dashboard](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/admin.png)
 ---
 
 # 🌍 About The Project
