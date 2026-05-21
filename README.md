@@ -18,7 +18,7 @@ A full-stack smart agriculture SaaS platform combining real-time IoT telemetry, 
 
 ## 🌍 Landing Page
 
-![Landing Page](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/landing.png)
+![Landing Page](https://raw.githubusercontent.com/saisathwik07/greenhouse-as-a-service/main/assets/Landing.png)
 
 ---
 
