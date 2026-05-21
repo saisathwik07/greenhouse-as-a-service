@@ -182,21 +182,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
----
 
-# 🔑 Environment Variables
-
-```env
-MONGO_URI=
-JWT_SECRET=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-RAZORPAY_KEY=
-RAZORPAY_SECRET=
-MQTT_BROKER_URL=
-```
-
----
 
 # 🌱 Sustainable Development Goals
 
