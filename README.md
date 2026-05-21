@@ -1,94 +1,206 @@
-# Syncora ⚡
+# 🌱 Smart Greenhouse as a Service (GaaS)
 
-<p align="center">
-  <img src="./assets/product-showcase.png" width="100%" alt="Syncora Product Showcase" />
-</p>
+<div align="center">
 
-<h1 align="center">🚀 Syncora — Modern Team Execution Platform</h1>
+## AI + IoT Powered Precision Agriculture Platform
 
-<p align="center">
-Built for startups, teams, and organizations that need speed, structure, and collaboration.
-</p>
+A full-stack smart agriculture SaaS platform combining real-time IoT telemetry, AI crop intelligence, MQTT communication, fertigation advisory, predictive analytics, and subscription-based greenhouse services.
 
----
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-success?style=for-the-badge)](https://greengaas.vercel.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com/saisathwik07/)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/saisathwikreddyn/)
 
-## ✨ Why Syncora?
-
-✅ Multi-tenant organization architecture  
-✅ Role-based access control  
-✅ Team collaboration workflows  
-✅ Task assignment & tracking  
-✅ Analytics dashboard  
-✅ Google OAuth + JWT authentication  
-✅ Modern enterprise UI  
+</div>
 
 ---
 
-## 📸 Product Screens
+# 📸 Project Preview
 
-### Landing
-<img src="./assets/landing.png" width="100%" />
+## 🌍 Landing Page
+![Landing Page](assets/landing.png)
 
-### Login
-<img src="./assets/login.png" width="100%" />
+## 📊 Smart Dashboard
+![Dashboard](assets/dashboard.png)
 
-### Dashboard
-<img src="./assets/dashboard.png" width="100%" />
+## 📈 Historical Analytics
+![Analytics](assets/history.png)
 
-### Tasks
-<img src="./assets/tasks.png" width="100%" />
+## 🌾 Yield Prediction
+![Yield Prediction](assets/yield.png)
 
-### Organizations
-<img src="./assets/organizations.png" width="100%" />
-
-### Teams
-<img src="./assets/teams.png" width="100%" />
-
-### Create Task
-<img src="./assets/newtask.png" width="100%" />
+## 👨‍💼 Admin SaaS Dashboard
+![Admin Dashboard](assets/admin.png)
 
 ---
 
-## 🛠 Tech Stack
+# 🌍 About The Project
 
-Frontend: Angular 19, Tailwind CSS, TypeScript  
-Backend: Node.js, Express.js  
-Database: MongoDB  
-Authentication: JWT + Google OAuth  
-Deployment: Railway + Vercel  
+Smart Greenhouse as a Service (GaaS) is an intelligent agriculture platform designed to modernize greenhouse farming using IoT sensors, machine learning, cloud infrastructure, and SaaS architecture.
+
+The platform enables real-time monitoring of environmental conditions such as:
+- Temperature
+- Humidity
+- Soil Moisture
+- pH Levels
+- EC Levels
+- Water Levels
+
+while also providing:
+- AI-powered crop recommendations
+- Yield prediction
+- Pest & disease detection
+- Historical analytics
+- Fertigation advisory
+- Subscription-based greenhouse services
 
 ---
 
-## 🌍 Live Demo
+# ✨ Core Features
 
-Frontend: https://sycora-production.up.railway.app
+- 🌡 Real-time IoT greenhouse monitoring
+- 📊 Historical telemetry analytics
+- 🌾 AI crop recommendation engine
+- 📈 Yield prediction using ML
+- 🦠 Pest & disease prediction
+- 💧 Smart irrigation & fertigation advisory
+- 👨‍💼 SaaS admin dashboard
+- 💳 Subscription & payment management
+- 🔐 Google OAuth authentication
+- 📡 MQTT live communication
 
 ---
 
-## ⚙️ Installation
+# 🧠 System Architecture
 
 ```bash
-git clone https://github.com/SaiSathwikReddyN/TaskManagementApp.git
-cd TaskManagementApp
-npm install
+IoT Sensors
+   ↓
+ESP32 / Arduino
+   ↓
+MQTT / WiFi Communication
+   ↓
+Node.js Backend APIs
+   ↓
+MongoDB Database
+   ↓
+React Frontend Dashboard
+   ↓
+Machine Learning Services
 ```
 
-### Backend
+---
+
+# ⚙️ Tech Stack
+
+## 🎨 Frontend
+- React.js
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Recharts
+
+## ⚡ Backend
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+
+## 🤖 AI & Machine Learning
+- Python
+- Flask
+- Scikit-learn
+- Pandas
+- NumPy
+
+## 📡 IoT & Communication
+- ESP32
+- Arduino
+- MQTT Protocol
+
+## 💳 Payments & Authentication
+- Razorpay
+- Google OAuth
+- JWT Authentication
+
+---
+
+# 🚀 Live Links
+
+### 🌐 Live Project
+https://greengaas.vercel.app/
+
+### 💻 GitHub
+https://github.com/saisathwik07/
+
+### 👨‍💼 LinkedIn
+https://linkedin.com/in/saisathwikreddyn/
+
+---
+
+# 📦 Installation
+
+## Clone Repository
+
 ```bash
-cd backend
+git clone https://github.com/saisathwik07/your-repo.git
+cd greenhouse-as-a-service
+```
+
+## Frontend
+
+```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-### Frontend
+## Backend
+
 ```bash
-ng serve
+cd backend
+npm install
+npm start
+```
+
+## AI Services
+
+```bash
+cd ai-services
+pip install -r requirements.txt
+python app.py
 ```
 
 ---
 
-## 👨‍💻 Author
+# 🔑 Environment Variables
 
-Sai Sathwik
+```env
+MONGO_URI=
+JWT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+RAZORPAY_KEY=
+RAZORPAY_SECRET=
+MQTT_BROKER_URL=
+```
 
-GitHub: https://github.com/SaiSathwikReddyN
+---
+
+# 🌱 Sustainable Development Goals
+
+✅ SDG 2 – Zero Hunger  
+✅ SDG 6 – Clean Water  
+✅ SDG 8 – Economic Growth  
+✅ SDG 9 – Innovation  
+✅ SDG 12 – Responsible Consumption  
+✅ SDG 13 – Climate Action  
+
+---
+
+# 👨‍💻 Developed By
+
+Sai Sathwik Reddy 
+
+
+
+
